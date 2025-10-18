@@ -38,18 +38,28 @@ export interface Category {
   color?: string | null;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+}
+
+
+
 export function InventoryDashboard() {
   // --- CORRECCIÓN: Envolver la creación del cliente en useMemo ---
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [products, setProducts] = useState<Product[]>([]); // Estado para productos de la DB
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true); // Estado de carga
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
+
+
+
   // --- FIX: Separar estados de diálogos y usar solo uno a la vez ---
   const [activeDialog, setActiveDialog] = useState<'add' | 'detail' | 'edit' | 'manageCategories' | 'addCategory' | 'editCategory' | 'confirmDeleteCategory' | null>(null);
-  
+
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     code: '',
     name: '',
@@ -64,7 +74,7 @@ export function InventoryDashboard() {
   });
   const [editProduct, setEditProduct] = useState<Partial<Product> | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | 'all'>('all');
-  
+
   // Estados para gestión de categorías
   const [newCategory, setNewCategory] = useState<{ name: string; description: string; color: string }>({ name: '', description: '', color: '#000000' });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -93,7 +103,14 @@ export function InventoryDashboard() {
         setLoading(false);
       }
     };
-    
+
+    interface Supplier {
+      id: string;
+      name: string;
+    }
+
+
+
     const loadCategories = async () => {
       const { data, error } = await supabase
         .from('categories')
@@ -112,7 +129,7 @@ export function InventoryDashboard() {
       .order('name');
     if (data) setCategories(data);
   };
-  
+
   const isReadOnly = userRole === 'cajero';
   const canEdit = userRole === 'admin' || userRole === 'bodega';
 
@@ -140,7 +157,7 @@ export function InventoryDashboard() {
   const openDialog = (dialogType: 'add' | 'detail' | 'edit' | 'manageCategories' | 'addCategory' | 'editCategory' | 'confirmDeleteCategory', data?: Product | Category) => {
     // Cerrar cualquier diálogo activo primero
     setActiveDialog(null);
-    
+
     // Pequeño delay para asegurar que el estado se actualice
     setTimeout(() => {
       if (dialogType === 'detail' && data) {
@@ -176,7 +193,7 @@ export function InventoryDashboard() {
         .insert({
           ...newProduct,
           category_id: newProduct.category_id || null,
-          supplier_id: null,
+          supplier_id: newProduct.supplier_id || null, // 👈 aquí ya se guarda el proveedor
           brand: newProduct.brand || null,
           stock: Number(newProduct.stock) || 0,
           min_stock: Number(newProduct.min_stock) || 0,
@@ -189,19 +206,33 @@ export function InventoryDashboard() {
       if (productError) throw productError;
 
       closeDialog();
-      // Recargar productos
+
+      // Recargar productos con join de categorías y proveedores
       const { data: updatedProducts } = await supabase
         .from('products')
         .select(`
-          *,
-          categories(id, name),
-          suppliers(id, name)
-        `);
-      
+        *,
+        categories(id, name),
+        suppliers(id, name)
+      `);
+
       if (updatedProducts) setProducts(updatedProducts);
 
-      // Limpiar el formulario
-      setNewProduct({ name: '', code: '', description: '', brand: '', stock: 0, min_stock: 0, price: 0, cost: 0, location: '', is_active: true, category_id: '' });
+      // Limpiar formulario
+      setNewProduct({
+        name: '',
+        code: '',
+        description: '',
+        brand: '',
+        stock: 0,
+        min_stock: 0,
+        price: 0,
+        cost: 0,
+        location: '',
+        is_active: true,
+        category_id: '',
+        supplier_id: '' // 👈 limpiar también proveedor
+      });
 
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -270,9 +301,26 @@ export function InventoryDashboard() {
   };
 
 
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+      if (!error && data) {
+        setSuppliers(data as Supplier[]); // 👈 ya no rompe
+      }
+    };
+
+    fetchSuppliers();
+  }, []);
+
+
   if (loading) {
     return <div>Cargando inventario...</div>;
   }
+
 
   return (
     <div className="space-y-6">
@@ -332,7 +380,7 @@ export function InventoryDashboard() {
             <CardTitle className="text-sm font-medium">Categorías</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent> 
+          <CardContent>
             <div className="text-2xl font-bold">{new Set(categories.map(p => p.id)).size}</div>
             <p className="text-xs text-muted-foreground">categorías activas</p>
           </CardContent>
@@ -371,7 +419,7 @@ export function InventoryDashboard() {
         <CardHeader>
           <CardTitle>Inventario de Productos</CardTitle>
           <CardDescription>
-            {isReadOnly 
+            {isReadOnly
               ? 'Consulta las unidades disponibles de productos para ventas'
               : 'Gestiona el inventario de tu ferretería y controla las unidades disponibles'
             }
@@ -383,6 +431,7 @@ export function InventoryDashboard() {
               <TableRow>
                 <TableHead>Producto</TableHead>
                 <TableHead>Categoría</TableHead>
+                <TableHead>Proveedor</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Precio</TableHead>
@@ -401,16 +450,31 @@ export function InventoryDashboard() {
                         <div className="text-sm text-muted-foreground">{product.brand}</div>
                       </div>
                     </TableCell>
+
+                    {/* Categoría */}
                     <TableCell>{(product as any).categories?.name || 'Sin categoría'}</TableCell>
+
+                    {/* Proveedor */}
+                    <TableCell>{(product as any).suppliers?.name || 'Sin proveedor'}</TableCell>
+
+                    {/* Stock */}
                     <TableCell>
                       <div className="font-medium">{product.stock} unidades</div>
                       <div className="text-sm text-muted-foreground">Mín: {product.min_stock}</div>
                     </TableCell>
+
+                    {/* Estado */}
                     <TableCell>
                       <Badge variant={stockStatus.variant}>{stockStatus.text}</Badge>
                     </TableCell>
+
+                    {/* Precio */}
                     <TableCell>${product.price.toLocaleString()}</TableCell>
+
+                    {/* Ubicación */}
                     <TableCell>{product.location}</TableCell>
+
+                    {/* Acciones */}
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
@@ -424,7 +488,12 @@ export function InventoryDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openDialog('edit', product)}
+                            onClick={() =>
+                              openDialog('edit', {
+                                ...product,
+                                supplier_id: (product as any).suppliers?.id || ''
+                              })
+                            }
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -440,7 +509,7 @@ export function InventoryDashboard() {
       </Card>
 
       {/* --- FIX: Diálogos separados con estados únicos --- */}
-      
+
       {/* Diálogo Agregar Producto */}
       <Dialog open={activeDialog === 'add'} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent>
@@ -459,7 +528,7 @@ export function InventoryDashboard() {
           >
             <div className="space-y-2">
               <Label htmlFor="name">Nombre del Producto*</Label>
-              <Input 
+              <Input
                 id="name"
                 value={newProduct.name}
                 onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
@@ -468,7 +537,7 @@ export function InventoryDashboard() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="code">Código</Label>
-              <Input 
+              <Input
                 id="code"
                 value={newProduct.code || ''}
                 onChange={e => setNewProduct({ ...newProduct, code: e.target.value })}
@@ -477,7 +546,7 @@ export function InventoryDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="stock">Stock Inicial*</Label>
-                <Input 
+                <Input
                   id="stock"
                   type="number"
                   value={newProduct.stock}
@@ -487,7 +556,7 @@ export function InventoryDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="min_stock">Stock Mínimo*</Label>
-                <Input 
+                <Input
                   id="min_stock"
                   type="number"
                   value={newProduct.min_stock}
@@ -499,7 +568,7 @@ export function InventoryDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price">Precio de Venta*</Label>
-                <Input 
+                <Input
                   id="price"
                   type="number"
                   value={newProduct.price}
@@ -509,7 +578,7 @@ export function InventoryDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cost">Costo</Label>
-                <Input 
+                <Input
                   id="cost"
                   type="number"
                   value={newProduct.cost || ''}
@@ -519,7 +588,7 @@ export function InventoryDashboard() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Descripción</Label>
-              <Input 
+              <Input
                 id="description"
                 value={newProduct.description || ''}
                 onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
@@ -527,7 +596,7 @@ export function InventoryDashboard() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="brand">Marca</Label>
-              <Input 
+              <Input
                 id="brand"
                 value={newProduct.brand || ''}
                 onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })}
@@ -535,7 +604,7 @@ export function InventoryDashboard() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Ubicación</Label>
-              <Input 
+              <Input
                 id="location"
                 value={newProduct.location || ''}
                 onChange={e => setNewProduct({ ...newProduct, location: e.target.value })}
@@ -554,6 +623,21 @@ export function InventoryDashboard() {
                 ))}
               </select>
             </div>
+            <label htmlFor="supplier">Proveedor</label>
+            <select
+              id="supplier"
+              value={newProduct.supplier_id || ''}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, supplier_id: e.target.value || null })
+              }
+            >
+              <option value="">-- Selecciona un proveedor --</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </option>
+              ))}
+            </select>
             <Button type="submit">Guardar Producto</Button>
           </form>
         </DialogContent>
@@ -605,6 +689,10 @@ export function InventoryDashboard() {
                   <label className="text-sm font-medium text-gray-500">Ubicación</label>
                   <p>{selectedProduct.location}</p>
                 </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-500">Proveedor</label>
+                  <p>{(selectedProduct as any).suppliers?.name || 'No asignado'}</p>
+                </div>
               </div>
             </div>
           )}
@@ -638,6 +726,7 @@ export function InventoryDashboard() {
                   price: Number(editProduct.price),
                   cost: Number(editProduct.cost),
                   category_id: editProduct.category_id,
+                  supplier_id: editProduct.supplier_id || null
                 };
 
                 const { error } = await supabase
@@ -680,7 +769,7 @@ export function InventoryDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit_stock">Stock Inicial*</Label>
-                  <Input 
+                  <Input
                     id="edit_stock"
                     type="number"
                     value={editProduct.stock}
@@ -690,7 +779,7 @@ export function InventoryDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_min_stock">Stock Mínimo*</Label>
-                  <Input 
+                  <Input
                     id="edit_min_stock"
                     type="number"
                     value={editProduct.min_stock}
@@ -702,7 +791,7 @@ export function InventoryDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit_price">Precio de Venta*</Label>
-                  <Input 
+                  <Input
                     id="edit_price"
                     type="number"
                     value={editProduct.price}
@@ -712,7 +801,7 @@ export function InventoryDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_cost">Costo</Label>
-                  <Input 
+                  <Input
                     id="edit_cost"
                     type="number"
                     value={editProduct.cost || ''}
@@ -722,7 +811,7 @@ export function InventoryDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit_description">Descripción</Label>
-                <Input 
+                <Input
                   id="edit_description"
                   value={editProduct.description || ''}
                   onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
@@ -730,7 +819,7 @@ export function InventoryDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit_brand">Marca</Label>
-                <Input 
+                <Input
                   id="edit_brand"
                   value={editProduct.brand || ''}
                   onChange={e => setEditProduct({ ...editProduct, brand: e.target.value })}
@@ -738,7 +827,7 @@ export function InventoryDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit_location">Ubicación</Label>
-                <Input 
+                <Input
                   id="edit_location"
                   value={editProduct.location || ''}
                   onChange={e => setEditProduct({ ...editProduct, location: e.target.value })}
@@ -756,6 +845,21 @@ export function InventoryDashboard() {
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-2">
+                  <Label>Proveedor</Label>
+                  <select
+                    value={editProduct.supplier_id || ''}
+                    onChange={e => setEditProduct({ ...editProduct, supplier_id: e.target.value })}
+                    className="border rounded px-2 py-1 w-full"
+                  >
+                    <option value="">Selecciona un proveedor</option>
+                    {suppliers.map(supplier => (
+                      <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <Button type="submit">Guardar Cambios</Button>
             </form>
@@ -787,18 +891,33 @@ export function InventoryDashboard() {
                 <TableRow key={cat.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <span className="h-4 w-4 rounded-full" style={{ backgroundColor: cat.color || '#ccc' }}></span>
+                      <span
+                        className="h-4 w-4 rounded-full"
+                        style={{ backgroundColor: cat.color || '#ccc' }}
+                      ></span>
                       {cat.name}
                     </div>
                   </TableCell>
+
                   <TableCell>{cat.description}</TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openDialog('editCategory', cat)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => openDialog('confirmDeleteCategory', cat)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDialog('editCategory', cat)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => openDialog('confirmDeleteCategory', cat)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
