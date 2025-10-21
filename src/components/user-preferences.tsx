@@ -75,21 +75,22 @@ export function UserPreferences() {
   }
 
   return (
-    <div className="space-y-4 max-w-lg mx-auto px-4">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-tight">Preferencias de Usuario</h2>
-        <p className="text-sm text-muted-foreground">
-          Personaliza la apariencia de tu aplicación
-        </p>
-      </div>
+    <div className="w-full flex justify-center">
+      <div className="space-y-4 w-full md:w-1/2 px-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight">Preferencias de Usuario</h2>
+          <p className="text-sm text-muted-foreground">
+            Personaliza la apariencia de tu aplicación
+          </p>
+        </div>
 
-      <Tabs defaultValue="appearance" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 max-w-xs mx-auto">
-          <TabsTrigger value="appearance">
-            <Monitor className="h-4 w-4 mr-2" />
-            Apariencia
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="appearance" className="w-full">
+          <TabsList className="grid w-full grid-cols-1 max-w-xs mx-auto">
+            <TabsTrigger value="appearance">
+              <Monitor className="h-4 w-4 mr-2" />
+              Apariencia
+            </TabsTrigger>
+          </TabsList>
 
         <TabsContent value="appearance" className="space-y-4">
           {/* Tema - Modo Claro/Oscuro */}
@@ -250,6 +251,7 @@ export function UserPreferences() {
           </div>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

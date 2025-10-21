@@ -42,14 +42,34 @@ export function formatColombiaDate(
 /**
  * Obtiene la fecha actual en formato ISO (YYYY-MM-DD) en zona horaria de Colombia
  * Útil para guardar en base de datos
- * @returns String en formato YYYY-MM-DD
+ * @returns String en formato YYYY-MM-DD con zona horaria de Colombia
  */
 export function getColombiaTodayISO(): string {
+  // Usar toLocaleDateString con zona horaria de Colombia
+  const parts = new Date().toLocaleDateString('en-CA', { 
+    timeZone: COLOMBIA_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  return parts; // Ya viene en formato YYYY-MM-DD
+}
+
+/**
+ * Obtiene la fecha y hora actual en formato ISO completo con zona horaria de Colombia
+ * Útil para timestamps precisos en base de datos
+ * @returns String en formato YYYY-MM-DDTHH:mm:ss
+ */
+export function getColombiaDateTimeISO(): string {
   const colombiaDate = getColombiaDate();
   const year = colombiaDate.getFullYear();
   const month = String(colombiaDate.getMonth() + 1).padStart(2, '0');
   const day = String(colombiaDate.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const hours = String(colombiaDate.getHours()).padStart(2, '0');
+  const minutes = String(colombiaDate.getMinutes()).padStart(2, '0');
+  const seconds = String(colombiaDate.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
 /**

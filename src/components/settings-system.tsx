@@ -382,14 +382,15 @@ export function SettingsSystem() {
   const adminUsers = (allUsers || []).filter((u) => u.role === 'admin');
 
   return (
-    <div className="space-y-4 sm:space-y-6 w-full max-w-full">
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold">Configuración del Sistema</h2>
-        <p className="text-sm sm:text-base text-muted-foreground">Gestiona usuarios y configuraciones de la ferretería</p>
-      </div>
+    <div className="w-full flex justify-center px-4">
+      <div className="space-y-4 sm:space-y-6 w-full max-w-4xl">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold">Configuración del Sistema</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Gestiona usuarios y configuraciones de la ferretería</p>
+        </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full max-w-full">
-        <TabsList className="grid w-full md:w-auto grid-cols-2 gap-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full">
+        <TabsList className="grid w-full grid-cols-2 gap-2 max-w-md mx-auto">
           <TabsTrigger 
             value="users" 
             className={`flex items-center justify-center px-4 py-2 ${
@@ -410,7 +411,7 @@ export function SettingsSystem() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="users" className="space-y-4 sm:space-y-6 w-full max-w-full">
+        <TabsContent value="users" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>  
               <CardTitle>Todos los Usuarios</CardTitle>
@@ -515,8 +516,8 @@ export function SettingsSystem() {
         </TabsContent>
         
         {/* --- AÑADIR EL CONTENIDO DE LA PESTAÑA DE EMPRESA --- */}
-        <TabsContent value="company" className="w-full max-w-full">
-          <Card className="w-full max-w-full">
+        <TabsContent value="company">
+          <Card>
             <CardHeader>
               <CardTitle>Información de la Empresa</CardTitle>
               <CardDescription>
@@ -697,6 +698,7 @@ export function SettingsSystem() {
       </Dialog>
 
       {/* Añade esta nueva tarjeta para cambiar la contraseña */}
+      </div>
     </div>
   );
 }

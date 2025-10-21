@@ -261,7 +261,7 @@ function AppMain() {
                   <LogOut className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Salir</span>
                 </Button>
-                <Badge variant="outline" className="hidden md:inline-flex">
+                <Badge variant="outline" className="hidden md:flex">
                   {formatColombiaDate()}
                 </Badge>
               </div>
@@ -269,9 +269,9 @@ function AppMain() {
           </header>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto w-full min-w-0">
+          <div className="flex-1 overflow-auto w-full min-w-0 bg-background">
             <div className="p-3 sm:p-4 md:p-6 w-full flex justify-center">
-              <div className="w-full md:max-w-[80%]">
+              <div className="w-full lg:max-w-[90%] xl:max-w-[85%] 2xl:max-w-[80%]">
                 {renderContent()}
               </div>
             </div>
