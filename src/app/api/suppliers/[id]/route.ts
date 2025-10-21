@@ -8,8 +8,12 @@ const supabase = createClient(
 );
 
 // PUT: actualizar proveedor
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { name, contact_name, phone, email, address } = body;
 
@@ -20,7 +24,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const { data, error } = await supabase
       .from('suppliers')
       .update({ name, contact_name, phone, email, address, updated_at: new Date().toISOString() })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -34,12 +38,16 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // DELETE: eliminar proveedor
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const { error } = await supabase
       .from('suppliers')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
