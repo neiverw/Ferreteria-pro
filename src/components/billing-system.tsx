@@ -1156,10 +1156,10 @@ export function BillingSystem() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Nueva Factura */}
-        <div className={currentInvoice.items.length === 0 ? 'lg:col-span-2' : 'lg:col-span-2'}>
+        <div className="md:col-span-1 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1474,26 +1474,25 @@ export function BillingSystem() {
           </Card>
         </div>
 
-        {/* Facturas Recientes - Solo mostrar cuando NO hay items en la factura */}
-        {currentInvoice.items.length === 0 && (
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Facturas Recientes</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loadInvoices(invoiceSearchTerm)}
-                    disabled={invoicesLoading}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${invoicesLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </CardTitle>
-                <CardDescription>
-                  {invoiceSearchTerm ? 'Resultados de búsqueda' : 'Últimas facturas generadas'}
-                </CardDescription>
-              </CardHeader>
+        {/* Facturas Recientes */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Facturas Recientes</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadInvoices(invoiceSearchTerm)}
+                  disabled={invoicesLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${invoicesLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                {invoiceSearchTerm ? 'Resultados de búsqueda' : 'Últimas facturas generadas'}
+              </CardDescription>
+            </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {/* Buscador de facturas */}
@@ -1594,7 +1593,6 @@ export function BillingSystem() {
               </CardContent>
             </Card>
           </div>
-        )}
       </div>
 
       {/* Dialog para ver factura completa - ACTUALIZADO CON TRADUCCIONES */}

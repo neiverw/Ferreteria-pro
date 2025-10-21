@@ -230,9 +230,9 @@ export function CustomerManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Métricas de clientes */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>
@@ -323,7 +323,7 @@ export function CustomerManagement() {
                   <Label htmlFor="document">Documento *</Label>
                   <div className="grid grid-cols-2 gap-2 items-center ">
                       <select
-                        className="col-span-1 border border-gray-300 rounded-md px-2 py-1"
+                        className="col-span-1 border border-input bg-background text-foreground rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
                       value={newCustomer.document_type}
                       onChange={(e) => setNewCustomer({ 
                         ...newCustomer, 
@@ -483,7 +483,7 @@ export function CustomerManagement() {
                     <Label htmlFor="edit-document">Documento *</Label>
                     <div className="grid grid-cols-2 gap-2 items-center ">
                       <select
-                        className="col-span-1 border border-gray-300 rounded-md px-2 py-1"
+                        className="col-span-1 border border-input bg-background text-foreground rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
                         value={editCustomer.document_type}
                         onChange={(e) => setEditCustomer({ 
                           ...editCustomer, 

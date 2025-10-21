@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
-import { 
-  AlertTriangle, 
-  Plus, 
-  Search, 
-  FileText, 
-  Clock, 
+import { cn } from './ui/utils';
+import {
+  AlertTriangle,
+  Plus,
+  Search,
+  FileText,
+  Clock,
   CheckCircle,
   Package,
   User,
@@ -57,8 +58,8 @@ interface StockReport {
 }
 
 interface LowStockProduct extends Product {
-    category_name: string | null;
-    stock_status: 'critical' | 'low' | 'normal';
+  category_name: string | null;
+  stock_status: 'critical' | 'low' | 'normal';
 }
 
 export function ReportsSystem() {
@@ -69,13 +70,13 @@ export function ReportsSystem() {
   const [reports, setReports] = useState<StockReport[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('create'); // Estado para la pestaña activa
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  
+
   const [newReport, setNewReport] = useState({
     productId: '',
     reportedStock: '',
@@ -119,7 +120,7 @@ export function ReportsSystem() {
 
     if (lowStockError) toast.error('Error al cargar alertas de stock.', { description: lowStockError.message });
     else setLowStockProducts(lowStockData || []);
-    
+
     setLoading(false);
   };
 
@@ -139,12 +140,12 @@ export function ReportsSystem() {
     const categoryName = report.products?.categories?.name || '';
 
     const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         categoryName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      categoryName.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || report.priority === priorityFilter;
-    
+
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -227,9 +228,9 @@ export function ReportsSystem() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Productos Agotados</CardTitle>
@@ -276,27 +277,36 @@ export function ReportsSystem() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger 
-            value="create" 
-            className={activeTab === 'create' ? 'bg-primary text-primary-foreground' : ''}
-
+        <TabsList className="grid w-full grid-cols-3 bg-muted p-1">
+          <TabsTrigger
+            value="create"
+            className={cn(
+              "text-xs sm:text-sm",
+              activeTab === 'create' && "bg-primary text-primary-foreground shadow-sm"
+            )}
           >
-            Crear Reporte
+            <span className="hidden sm:inline">Crear Reporte</span>
+            <span className="sm:hidden">Crear</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value="alerts" 
-            className={activeTab === 'alerts' ? 'bg-primary text-primary-foreground' : ''}
-
+          <TabsTrigger
+            value="alerts"
+            className={cn(
+              "text-xs sm:text-sm",
+              activeTab === 'alerts' && "bg-primary text-primary-foreground shadow-sm"
+            )}
           >
-            Alertas de Stock
+            <span className="hidden sm:inline">Alertas de Stock</span>
+            <span className="sm:hidden">Alertas</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value="history" 
-            className={activeTab === 'history' ? 'bg-primary text-primary-foreground' : ''}
-
+          <TabsTrigger
+            value="history"
+            className={cn(
+              "text-xs sm:text-sm",
+              activeTab === 'history' && "bg-primary text-primary-foreground shadow-sm"
+            )}
           >
-            Historial de Reportes
+            <span className="hidden sm:inline">Historial de Reportes</span>
+            <span className="sm:hidden">Historial</span>
           </TabsTrigger>
         </TabsList>
 
@@ -377,8 +387,8 @@ export function ReportsSystem() {
                 />
               </div>
 
-              <Button 
-                onClick={handleCreateReport} 
+              <Button
+                onClick={handleCreateReport}
                 disabled={!newReport.productId || newReport.reportedStock === ''}
                 className="w-full"
               >
@@ -390,29 +400,32 @@ export function ReportsSystem() {
         </TabsContent>
 
         {/* Alertas de stock */}
-        <TabsContent value="alerts" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
+        <TabsContent value="alerts" className="space-y-4 mt-4">
+          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
+            <Card className="w-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-destructive text-base sm:text-lg">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
                   Productos Agotados
                 </CardTitle>
-                <CardDescription>Productos con stock cero.</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Productos con stock cero.</CardDescription>
               </CardHeader>
               <CardContent>
                 {criticalProducts.length === 0 ? (
-                  <div className="text-center py-8"><CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" /><p className="text-muted-foreground">¡Genial! No hay productos agotados.</p></div>
+                  <div className="text-center py-6 sm:py-8">
+                    <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 mx-auto mb-3 sm:mb-4" />
+                    <p className="text-sm sm:text-base text-muted-foreground">¡Genial! No hay productos agotados.</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-[450px] overflow-y-auto pr-2">
                     {criticalProducts.map((product) => (
-                      <div key={product.id} className="flex items-center justify-between p-3 border border-destructive/20 rounded-lg bg-destructive/5">
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">{product.category_name} - {product.location}</div>
+                      <div key={product.id} className="flex items-center justify-between p-2 sm:p-3 border border-destructive/20 rounded-lg bg-destructive/5">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{product.category_name} - {product.location}</div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="destructive">Agotado</Badge>
+                        <div className="text-right ml-2 flex-shrink-0">
+                          <Badge variant="destructive" className="text-xs">Agotado</Badge>
                           <div className="text-xs text-muted-foreground mt-1">Min: {product.min_stock}</div>
                         </div>
                       </div>
@@ -422,27 +435,30 @@ export function ReportsSystem() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600">
-                  <Package className="h-5 w-5" />
+            <Card className="w-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-orange-600 text-base sm:text-lg">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                   Stock Bajo
                 </CardTitle>
-                <CardDescription>Productos por debajo del stock mínimo.</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Productos por debajo del stock mínimo.</CardDescription>
               </CardHeader>
               <CardContent>
                 {lowStockAlerts.length === 0 ? (
-                  <div className="text-center py-8"><CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" /><p className="text-muted-foreground">Todos los productos tienen stock adecuado.</p></div>
+                  <div className="text-center py-6 sm:py-8">
+                    <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 mx-auto mb-3 sm:mb-4" />
+                    <p className="text-sm sm:text-base text-muted-foreground">Todos los productos tienen stock adecuado.</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-[450px] overflow-y-auto pr-2">
                     {lowStockAlerts.map((product) => (
-                      <div key={product.id} className="flex items-center justify-between p-3 border border-orange-200 rounded-lg bg-orange-50">
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">{product.category_name} - {product.location}</div>
+                      <div key={product.id} className="flex items-center justify-between p-2 sm:p-3 border border-orange-200 rounded-lg bg-orange-50">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{product.category_name} - {product.location}</div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="secondary" className="bg-orange-500 text-white">Stock: {product.stock}</Badge>
+                        <div className="text-right ml-2 flex-shrink-0">
+                          <Badge variant="secondary" className="bg-orange-500 text-white text-xs">Stock: {product.stock}</Badge>
                           <div className="text-xs text-muted-foreground mt-1">Min: {product.min_stock}</div>
                         </div>
                       </div>
@@ -456,14 +472,21 @@ export function ReportsSystem() {
 
         {/* Historial de reportes */}
         <TabsContent value="history" className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-2 flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input placeholder="Buscar reportes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 max-w-sm" />
-              </div>
+          <div className="flex flex-col gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar reportes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full"
+              />
+            </div>
+            <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+                <SelectTrigger className="flex-1 text-xs sm:text-sm h-9">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pending">Pendiente</SelectItem>
@@ -473,7 +496,9 @@ export function ReportsSystem() {
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[140px]"><SelectValue placeholder="Prioridad" /></SelectTrigger>
+                <SelectTrigger className="flex-1 text-xs sm:text-sm h-9">
+                  <SelectValue placeholder="Prioridad" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="critical">Crítica</SelectItem>
@@ -486,78 +511,90 @@ export function ReportsSystem() {
           </div>
 
           <Card>
-            <CardHeader><CardTitle>Historial de Reportes</CardTitle><CardDescription>Todos los reportes de stock registrados.</CardDescription></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Reportado por</TableHead>
-                    <TableHead>Stock (Contado/Sist.)</TableHead>
-                    <TableHead>Prioridad</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell>
-                        <div className="font-medium">{report.products?.name || 'Producto no encontrado'}</div>
-                        <div className="text-sm text-muted-foreground">{report.report_number || 'Sin número'}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>{report.reporter?.name || 'Usuario desconocido'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-center font-medium">{report.reported_stock} / {report.current_stock}</div>
-                      </TableCell>
-                      <TableCell>{getPriorityBadge(report.priority)}</TableCell>
-                      <TableCell>
-                        {userRole === 'admin' ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="flex gap-2 items-center h-8">
-                                {getStatusBadge(report.status)}
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {report.status === 'pending' && <DropdownMenuItem onClick={() => handleStatusChange(report.id, 'reviewed')}>Marcar como Revisado</DropdownMenuItem>}
-                              {report.status === 'reviewed' && <DropdownMenuItem onClick={() => handleStatusChange(report.id, 'resolved')}>Marcar como Resuelto</DropdownMenuItem>}
-                              <DropdownMenuItem onClick={() => handleStatusChange(report.id, 'cancelled')}>Cancelar Reporte</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          getStatusBadge(report.status)
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm"><Calendar className="h-3 w-3" />{new Date(report.report_date).toLocaleDateString('es-ES')}</div>
-                        <div className="text-xs text-muted-foreground">{report.report_time}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedReport(report);
-                            setShowReportDialog(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg">Historial de Reportes</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Todos los reportes de stock registrados.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-6">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs sm:text-sm">Producto</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Reportado por</TableHead>
+                      <TableHead className="text-xs sm:text-sm whitespace-nowrap">Stock (Contado/Sist.)</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Prioridad</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Estado</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Fecha</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReports.map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="min-w-[150px]">
+                          <div className="font-medium text-xs sm:text-sm">{report.products?.name || 'Producto no encontrado'}</div>
+                          <div className="text-xs text-muted-foreground">{report.report_number || 'Sin número'}</div>
+                        </TableCell>
+                        <TableCell className="min-w-[120px]">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs sm:text-sm truncate">{report.reporter?.name || 'Usuario desconocido'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="min-w-[100px]">
+                          <div className="text-center font-medium text-xs sm:text-sm">{report.reported_stock} / {report.current_stock}</div>
+                        </TableCell>
+                        <TableCell className="min-w-[100px]">{getPriorityBadge(report.priority)}</TableCell>
+                        <TableCell className="min-w-[120px]">
+                          {userRole === 'admin' ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="flex gap-1 items-center h-8 px-2 text-xs sm:text-sm">
+                                  {getStatusBadge(report.status)}
+                                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {report.status === 'pending' && <DropdownMenuItem onClick={() => handleStatusChange(report.id, 'reviewed')}>Marcar como Revisado</DropdownMenuItem>}
+                                {report.status === 'reviewed' && <DropdownMenuItem onClick={() => handleStatusChange(report.id, 'resolved')}>Marcar como Resuelto</DropdownMenuItem>}
+                                <DropdownMenuItem onClick={() => handleStatusChange(report.id, 'cancelled')}>Cancelar Reporte</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            getStatusBadge(report.status)
+                          )}
+                        </TableCell>
+                        <TableCell className="min-w-[100px]">
+                          <div className="flex items-center gap-1 text-xs sm:text-sm">
+                            <Calendar className="h-3 w-3 flex-shrink-0" />
+                            {new Date(report.report_date).toLocaleDateString('es-ES')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{report.report_time}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              setSelectedReport(report);
+                              setShowReportDialog(true);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               {filteredReports.length === 0 && (
-                <div className="text-center py-8"><FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">No se encontraron reportes.</p></div>
+                <div className="text-center py-8">
+                  <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm sm:text-base text-muted-foreground">No se encontraron reportes.</p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -648,10 +685,10 @@ export function ReportsSystem() {
                   <div>
                     <p className="text-sm text-muted-foreground">Fecha y Hora</p>
                     <p className="font-medium">
-                      {new Date(selectedReport.report_date).toLocaleDateString('es-ES', { 
-                        day: '2-digit', 
-                        month: 'long', 
-                        year: 'numeric' 
+                      {new Date(selectedReport.report_date).toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
                       })}
                     </p>
                     <p className="text-sm text-muted-foreground">{selectedReport.report_time}</p>
@@ -680,8 +717,8 @@ export function ReportsSystem() {
                     <h3 className="font-semibold mb-3">Acciones</h3>
                     <div className="flex gap-2">
                       {selectedReport.status === 'pending' && (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => {
                             handleStatusChange(selectedReport.id, 'reviewed');
                             setShowReportDialog(false);
@@ -691,8 +728,8 @@ export function ReportsSystem() {
                         </Button>
                       )}
                       {selectedReport.status === 'reviewed' && (
-                        <Button 
-                          variant="default" 
+                        <Button
+                          variant="default"
                           onClick={() => {
                             handleStatusChange(selectedReport.id, 'resolved');
                             setShowReportDialog(false);
@@ -701,8 +738,8 @@ export function ReportsSystem() {
                           Marcar como Resuelto
                         </Button>
                       )}
-                      <Button 
-                        variant="destructive" 
+                      <Button
+                        variant="destructive"
                         onClick={() => {
                           handleStatusChange(selectedReport.id, 'cancelled');
                           setShowReportDialog(false);

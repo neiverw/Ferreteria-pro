@@ -202,8 +202,8 @@ export function SuppliersManagement() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-          <CardTitle className="text-xl font-bold">Gestión de Proveedores</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b gap-3">
+          <CardTitle className="text-lg sm:text-xl font-bold">Gestión de Proveedores</CardTitle>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
@@ -247,8 +247,8 @@ export function SuppliersManagement() {
 
         <CardContent>
           {/* Buscador */}
-          <div className="flex justify-between items-center mb-4">
-            <div className="relative w-72">
+          <div className="mb-4">
+            <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="Buscar proveedores..."

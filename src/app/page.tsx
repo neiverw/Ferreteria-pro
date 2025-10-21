@@ -188,28 +188,28 @@ function AppMain() {
     // Esto evita el desmontaje y mantiene el estado/datos cargados
     return (
       <>
-        <div style={{ display: activeView === 'dashboard' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'dashboard' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('dashboard') && <DashboardOverview />}
         </div>
-        <div style={{ display: activeView === 'inventory' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'inventory' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('inventory') && <InventoryDashboard />}
         </div>
-        <div style={{ display: activeView === 'suppliers' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'suppliers' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('suppliers') && <SuppliersManagement />}
         </div>
-        <div style={{ display: activeView === 'billing' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'billing' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('billing') && <BillingSystem />}
         </div>
-        <div style={{ display: activeView === 'customers' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'customers' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('customers') && <CustomerManagement />}
         </div>
-        <div style={{ display: activeView === 'reports' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'reports' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('reports') && <ReportsSystem />}
         </div>
-        <div style={{ display: activeView === 'settings' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'settings' ? 'block' : 'none' }} className="w-full max-w-full">
           {canAccess('settings') && <SettingsSystem />}
         </div>
-        <div style={{ display: activeView === 'preferences' ? 'block' : 'none' }}>
+        <div style={{ display: activeView === 'preferences' ? 'block' : 'none' }} className="w-full max-w-full">
           <UserPreferences />
         </div>
       </>
@@ -234,36 +234,42 @@ function AppMain() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background">
+      <div className="grid h-screen bg-background w-full" style={{ gridTemplateColumns: 'auto 1fr' }}>
         <AppSidebar activeView={activeView} setActiveView={handleViewChange} />
         
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex flex-col overflow-hidden w-full min-w-0" style={{ width: '100%', minWidth: 0 }}>
           {/* Header */}
-          <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-            <div className="flex items-center justify-between px-4 py-4">
-              <div className="flex items-center gap-4">
+          <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 w-full">
+            <div className="flex items-center justify-between px-2 sm:px-4 py-3 sm:py-4 gap-2">
+              <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                 <SidebarTrigger>
                   <Button variant="ghost" size="sm">
                     <Menu className="h-4 w-4" />
                   </Button>
                 </SidebarTrigger>
-                <h1 className="text-xl font-semibold">{getPageTitle()}</h1>
+                <h1 className="text-base sm:text-xl font-semibold truncate">{getPageTitle()}</h1>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 {/* Info del usuario */}
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg">
                     {userRole === 'admin' && <Crown className="h-4 w-4 text-yellow-600" />}
                     {userRole === 'cajero' && <CreditCard className="h-4 w-4 text-green-600" />}
                     {userRole === 'bodega' && <Package className="h-4 w-4 text-blue-600" />}
                     <span className="text-sm font-medium">{user?.name}</span>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Salir
+                  {/* Versión móvil - solo icono */}
+                  <div className="sm:hidden flex items-center gap-2 px-2 py-1 bg-primary/10 rounded-lg">
+                    {userRole === 'admin' && <Crown className="h-4 w-4 text-yellow-600" />}
+                    {userRole === 'cajero' && <CreditCard className="h-4 w-4 text-green-600" />}
+                    {userRole === 'bodega' && <Package className="h-4 w-4 text-blue-600" />}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleLogout} className="px-2 sm:px-4">
+                    <LogOut className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Salir</span>
                   </Button>
                 </div>
-                <Badge variant="outline">
+                <Badge variant="outline" className="hidden md:inline-flex">
                   {formatColombiaDate()}
                 </Badge>
               </div>
@@ -271,8 +277,10 @@ function AppMain() {
           </header>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto p-6">
-            {renderContent()}
+          <div className="flex-1 overflow-auto w-full min-w-0">
+            <div className="p-3 sm:p-4 md:p-6 w-full max-w-full">
+              {renderContent()}
+            </div>
           </div>
         </main>
       </div>

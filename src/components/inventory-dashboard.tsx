@@ -335,25 +335,25 @@ export function InventoryDashboard() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Filtro por categoría */}
-      <div className="flex gap-2 items-center mb-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <Label>Categoría:</Label>
         <select
           value={selectedCategoryId}
           onChange={e => setSelectedCategoryId(e.target.value)}
-          className="border rounded px-2 py-1"
+          className="border border-input bg-background text-foreground rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="all">Todas</option>
           {categories.map(cat => (
             <option key={cat.id} value={cat.id}>{cat.name}</option>
           ))}
         </select>
-        <Button variant="outline" onClick={() => setSelectedCategoryId('all')}>Quitar filtro</Button>
+        <Button variant="outline" size="sm" onClick={() => setSelectedCategoryId('all')}>Quitar filtro</Button>
       </div>
 
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Productos</CardTitle>
@@ -627,7 +627,7 @@ export function InventoryDashboard() {
               <select
                 value={newProduct.category_id || ''}
                 onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}
-                className="border rounded px-2 py-1 w-full"
+                className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Selecciona una categoría</option>
                 {categories.map(cat => (
@@ -642,6 +642,7 @@ export function InventoryDashboard() {
               onChange={(e) =>
                 setNewProduct({ ...newProduct, supplier_id: e.target.value || null })
               }
+              className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">-- Selecciona un proveedor --</option>
               {suppliers.map((supplier) => (
@@ -850,7 +851,7 @@ export function InventoryDashboard() {
                 <select
                   value={editProduct.category_id || ''}
                   onChange={e => setEditProduct({ ...editProduct, category_id: e.target.value })}
-                  className="border rounded px-2 py-1 w-full"
+                  className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Selecciona una categoría</option>
                   {categories.map(cat => (
@@ -864,7 +865,7 @@ export function InventoryDashboard() {
                   <select
                     value={editProduct.supplier_id || ''}
                     onChange={e => setEditProduct({ ...editProduct, supplier_id: e.target.value })}
-                    className="border rounded px-2 py-1 w-full"
+                    className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Selecciona un proveedor</option>
                     {suppliers.map(supplier => (
@@ -881,7 +882,7 @@ export function InventoryDashboard() {
 
       {/* Diálogo Gestionar Categorías */}
       <Dialog open={activeDialog === 'manageCategories'} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Gestionar Categorías</DialogTitle>
             <DialogDescription>Agrega, edita o elimina las categorías de productos.</DialogDescription>
@@ -890,55 +891,59 @@ export function InventoryDashboard() {
             <Plus className="h-4 w-4 mr-2" />
             Nueva Categoría
           </Button>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map(cat => (
-                <TableRow key={cat.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="h-4 w-4 rounded-full"
-                        style={{ backgroundColor: cat.color || '#ccc' }}
-                      ></span>
-                      {cat.name}
-                    </div>
-                  </TableCell>
-
-                  <TableCell>{cat.description}</TableCell>
-
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDialog('editCategory', cat)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => openDialog('confirmDeleteCategory', cat)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="overflow-y-auto flex-1 border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-background">
+                  <TableHead className="sticky top-0 bg-background z-10">Nombre</TableHead>
+                  <TableHead className="sticky top-0 bg-background z-10">Descripción</TableHead>
+                  <TableHead className="sticky top-0 bg-background z-10 text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </DialogContent>
-      </Dialog>
+              </TableHeader>
+              <TableBody>
+                {categories.map(cat => (
+                  <TableRow key={cat.id}>
+                    <TableCell className="min-w-[150px] max-w-[200px]">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-4 w-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: cat.color || '#ccc' }}
+                        ></span>
+                        <span className="truncate">{cat.name}</span>
+                      </div>
+                    </TableCell>
 
-      {/* Diálogo Agregar Categoría */}
+                    <TableCell className="min-w-[300px] max-w-[500px]">
+                      <div className="line-clamp-2 text-sm" title={cat.description || ''}>
+                        {cat.description || '-'}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="min-w-[120px]">
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDialog('editCategory', cat)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDialog('confirmDeleteCategory', cat)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>      {/* Diálogo Agregar Categoría */}
       <Dialog open={activeDialog === 'addCategory'} onOpenChange={(open) => !open && setActiveDialog('manageCategories')}>
         <DialogContent>
           <DialogHeader>

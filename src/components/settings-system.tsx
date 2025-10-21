@@ -382,33 +382,31 @@ export function SettingsSystem() {
   const adminUsers = (allUsers || []).filter((u) => u.role === 'admin');
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Configuración del Sistema</h2>
-          <p className="text-muted-foreground">Gestiona usuarios y configuraciones de la ferretería</p>
-        </div>
+    <div className="space-y-4 sm:space-y-6 w-full max-w-full">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-bold">Configuración del Sistema</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">Gestiona usuarios y configuraciones de la ferretería</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger 
-            value="users" 
-            className={activeTab === 'users' ? 'bg-primary text-primary-foreground' : ''}
-          >
-            <Users className="h-4 w-4 mr-2" />Gestión de Usuarios
-          </TabsTrigger>
-          <TabsTrigger 
-            value="company" 
-            className={activeTab === 'company' ? 'bg-primary text-primary-foreground' : ''}
-          >
-            <Building2 className="h-4 w-4 mr-2" />Información de Empresa
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full max-w-full">
+        <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger 
+              value="users" 
+              className={activeTab === 'users' ? 'bg-primary text-primary-foreground' : ''}
+            >
+              <Users className="h-4 w-4 mr-2" /><span className="hidden sm:inline">Gestión de </span>Usuarios
+            </TabsTrigger>
+            <TabsTrigger 
+              value="company" 
+              className={activeTab === 'company' ? 'bg-primary text-primary-foreground' : ''}
+            >
+              <Building2 className="h-4 w-4 mr-2" /><span className="hidden sm:inline">Información de </span>Empresa
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="users" className="space-y-6">
+        <TabsContent value="users" className="space-y-4 sm:space-y-6 w-full max-w-full">
           <Card>
-            <CardHeader>
+            <CardHeader>  
               <CardTitle>Todos los Usuarios</CardTitle>
               <CardDescription>Gestiona todos los perfiles de usuario del sistema.</CardDescription>
             </CardHeader>
@@ -507,8 +505,8 @@ export function SettingsSystem() {
         </TabsContent>
         
         {/* --- AÑADIR EL CONTENIDO DE LA PESTAÑA DE EMPRESA --- */}
-        <TabsContent value="company">
-          <Card>
+        <TabsContent value="company" className="w-full max-w-full">
+          <Card className="w-full max-w-full">
             <CardHeader>
               <CardTitle>Información de la Empresa</CardTitle>
               <CardDescription>
@@ -516,8 +514,8 @@ export function SettingsSystem() {
                 {user?.role !== 'admin' && <span className="text-yellow-600 font-bold block mt-2">Solo los administradores pueden editar esta información.</span>}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-4 w-full max-w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-full">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Nombre de la Empresa</Label>
                   <Input
@@ -526,6 +524,7 @@ export function SettingsSystem() {
                     onChange={(e) => setCompanySettings({ ...companySettings, companyName: e.target.value })}
                     disabled={user?.role !== 'admin'}
                     placeholder="Nombre de la empresa"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -536,6 +535,7 @@ export function SettingsSystem() {
                     onChange={(e) => setCompanySettings({ ...companySettings, companyNit: e.target.value })}
                     disabled={user?.role !== 'admin'}
                     placeholder="NIT de la empresa"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -546,6 +546,7 @@ export function SettingsSystem() {
                     onChange={(e) => setCompanySettings({ ...companySettings, companyPhone: e.target.value })}
                     disabled={user?.role !== 'admin'}
                     placeholder="Teléfono de la empresa"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -557,9 +558,10 @@ export function SettingsSystem() {
                     onChange={(e) => setCompanySettings({ ...companySettings, companyEmail: e.target.value })}
                     disabled={user?.role !== 'admin'}
                     placeholder="Email de la empresa"
+                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="companyAddress">Dirección</Label>
                   <Input
                     id="companyAddress"
@@ -567,6 +569,7 @@ export function SettingsSystem() {
                     onChange={(e) => setCompanySettings({ ...companySettings, companyAddress: e.target.value })}
                     disabled={user?.role !== 'admin'}
                     placeholder="Dirección de la empresa"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -581,6 +584,7 @@ export function SettingsSystem() {
                     onChange={(e) => setCompanySettings({ ...companySettings, defaultTaxRate: parseFloat(e.target.value) || 0 })}
                     disabled={user?.role !== 'admin'}
                     placeholder="16.0"
+                    className="w-full"
                   />
                 </div>
               </div>

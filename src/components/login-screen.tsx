@@ -39,8 +39,8 @@ export function LoginScreen() {
   const companyName = systemSettings?.companyName || 'Sistema de Gestión';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-3 sm:p-4">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         {/* Panel de información */}
         <div className="hidden lg:flex flex-col justify-center space-y-6">
           <div className="text-center">
@@ -56,13 +56,17 @@ export function LoginScreen() {
 
         {/* Formulario de login */}
         <div className="flex flex-col justify-center">
-          <Card className="w-full max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-primary text-primary-foreground rounded-xl mx-auto mb-4 lg:hidden">
+          <Card className="w-full max-w-md mx-auto shadow-lg">
+            <CardHeader className="text-center space-y-3">
+              <div className="flex items-center justify-center w-12 h-12 bg-primary text-primary-foreground rounded-xl mx-auto lg:hidden">
                 <Wrench className="h-6 w-6" />
               </div>
-              <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
-              <CardDescription>
+              <div className="lg:hidden">
+                <h1 className="text-xl font-bold text-gray-900">{companyName}</h1>
+                <p className="text-sm text-gray-600">Sistema de Gestión</p>
+              </div>
+              <CardTitle className="text-xl sm:text-2xl">Iniciar Sesión</CardTitle>
+              <CardDescription className="text-sm">
                 Ingresa tus credenciales para acceder al sistema
               </CardDescription>
             </CardHeader>

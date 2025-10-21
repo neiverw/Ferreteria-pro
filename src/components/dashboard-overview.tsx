@@ -141,9 +141,9 @@ export function DashboardOverview() {
   }, [supabase]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-full">
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-full">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ventas del Mes</CardTitle>
@@ -185,9 +185,9 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full max-w-full">
         {/* Gráfico de ventas */}
-        <Card>
+        <Card className="lg:col-span-2 w-full max-w-full">
           <CardHeader>
             <CardTitle>Tendencia de Ventas</CardTitle>
             <CardDescription>Ventas mensuales y productos vendidos</CardDescription>
@@ -206,7 +206,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Distribución por categorías */}
-        <Card>
+        <Card className="w-full max-w-full">
           <CardHeader>
             <CardTitle>Ventas por Categoría</CardTitle>
             <CardDescription>Distribución de ventas por tipo de producto</CardDescription>
@@ -240,9 +240,9 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-full">
         {/* Productos más vendidos */}
-        <Card>
+        <Card className="w-full max-w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
@@ -275,7 +275,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Alertas de stock bajo */}
-        <Card>
+        <Card className="w-full max-w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-600" />

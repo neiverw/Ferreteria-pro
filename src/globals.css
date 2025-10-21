@@ -215,3 +215,59 @@ html {
 .bg-gray-900 {
   background-color: #111827 !important;
 }
+
+/* Fix para forzar ancho completo en dashboard y otros componentes */
+main {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+main > div {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Asegurar que el grid use todo el ancho disponible */
+@media (min-width: 1280px) {
+  .grid {
+    width: 100% !important;
+  }
+}
+
+/* Asegurar que los contenedores internos usen todo el ancho */
+[class*="space-y"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Asegurar que las cards usen todo el ancho disponible */
+[data-slot="card"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Fix específico para móviles - forzar ancho completo */
+@media (max-width: 640px) {
+  .grid {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  [data-slot="card"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  [data-slot="card-content"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  input, select, textarea, [data-slot="select-trigger"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}

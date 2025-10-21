@@ -54,37 +54,13 @@ function ThemeContent({ children }: { children: React.ReactNode }) {
   };
 
   const setTheme = async (newTheme: 'light' | 'dark') => {
+    console.log('setTheme llamado con:', newTheme);
     setNextTheme(newTheme);
-    if (user) {
-      try {
-        await fetch('/api/user-preferences', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            preferences: { theme: newTheme, fontSize }
-          })
-        });
-      } catch (error) {
-        console.error('Error al guardar tema:', error);
-      }
-    }
   };
 
   const setFontSize = async (newSize: 'small' | 'medium' | 'large') => {
+    console.log('setFontSize llamado con:', newSize);
     setFontSizeState(newSize);
-    if (user) {
-      try {
-        await fetch('/api/user-preferences', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            preferences: { theme: (nextTheme as 'light' | 'dark') || 'light', fontSize: newSize }
-          })
-        });
-      } catch (error) {
-        console.error('Error al guardar tamaño de fuente:', error);
-      }
-    }
   };
 
   const theme = (nextTheme as 'light' | 'dark') || 'light';

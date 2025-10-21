@@ -49,11 +49,15 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.error('Error de autenticación:', authError);
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
+    console.log('Usuario autenticado:', user.id);
+
     // Obtener las preferencias del body
     const { preferences } = await request.json();
+    console.log('Preferencias recibidas:', preferences);
 
     if (!preferences || typeof preferences !== 'object') {
       return NextResponse.json({ error: 'Preferencias inválidas' }, { status: 400 });
@@ -69,26 +73,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('Preferencias validadas:', validatedPreferences);
+
     // Actualizar preferencias
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from('profiles')
       .update({ 
         user_preferences: validatedPreferences,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .select();
 
     if (updateError) {
-      console.error('Error al actualizar preferencias:', updateError);
+      console.error('Error al actualizar preferencias en DB:', updateError);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    console.log('Preferencias actualizadas en DB:', updateData);
+
     return NextResponse.json({ 
       message: 'Preferencias actualizadas exitosamente',
-      preferences: validatedPreferences
+      preferences: validatedPreferences,
+      updated: updateData
     }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en POST /api/user-preferences:', error);
-    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error del servidor',
+      details: error.message 
+    }, { status: 500 });
   }
 }
