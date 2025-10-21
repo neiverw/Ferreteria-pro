@@ -401,7 +401,7 @@ export function InventoryDashboard() {
 
       {/* Búsqueda y acciones */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Buscar productos..."
@@ -410,17 +410,26 @@ export function InventoryDashboard() {
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {userRole === 'admin' && (
-            <Button variant="secondary" onClick={() => openDialog('manageCategories')}>
-              <ListTree className="h-4 w-4 mr-2" />
-              Gestionar Categorías
+            <Button 
+              variant="secondary" 
+              onClick={() => openDialog('manageCategories')}
+              className="flex-1 sm:flex-none"
+            >
+              <ListTree className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Gestionar Categorías</span>
+              <span className="sm:hidden">Categorías</span>
             </Button>
           )}
           {canEdit && (
-            <Button onClick={() => openDialog('add')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Producto
+            <Button 
+              onClick={() => openDialog('add')}
+              className="flex-1 sm:flex-none"
+            >
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Agregar Producto</span>
+              <span className="sm:hidden">Agregar</span>
             </Button>
           )}
         </div>
@@ -488,24 +497,28 @@ export function InventoryDashboard() {
 
                     {/* Acciones */}
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2 items-center">
                         <Button
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => openDialog('detail', product)}
+                          className="h-8 w-8"
+                          title="Ver detalles"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         {canEdit && (
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() =>
                               openDialog('edit', {
                                 ...product,
                                 supplier_id: (product as any).suppliers?.id || ''
                               })
                             }
+                            className="h-8 w-8"
+                            title="Editar producto"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -524,135 +537,149 @@ export function InventoryDashboard() {
 
       {/* Diálogo Agregar Producto */}
       <Dialog open={activeDialog === 'add'} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Agregar Producto</DialogTitle>
             <DialogDescription>
               Complete los campos para agregar un nuevo producto al inventario
             </DialogDescription>
           </DialogHeader>
-          <form
-            className="grid gap-4"
-            onSubmit={e => {
-              e.preventDefault();
-              handleAddProduct();
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre del Producto*</Label>
-              <Input
-                id="name"
-                value={newProduct.name}
-                onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="code">Código</Label>
-              <Input
-                id="code"
-                value={newProduct.code || ''}
-                onChange={e => setNewProduct({ ...newProduct, code: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="stock">Stock Inicial*</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  value={newProduct.stock}
-                  onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="min_stock">Stock Mínimo*</Label>
-                <Input
-                  id="min_stock"
-                  type="number"
-                  value={newProduct.min_stock}
-                  onChange={e => setNewProduct({ ...newProduct, min_stock: Number(e.target.value) })}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Precio de Venta*</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={newProduct.price}
-                  onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cost">Costo</Label>
-                <Input
-                  id="cost"
-                  type="number"
-                  value={newProduct.cost || ''}
-                  onChange={e => setNewProduct({ ...newProduct, cost: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Input
-                id="description"
-                value={newProduct.description || ''}
-                onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="brand">Marca</Label>
-              <Input
-                id="brand"
-                value={newProduct.brand || ''}
-                onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Ubicación</Label>
-              <Input
-                id="location"
-                value={newProduct.location || ''}
-                onChange={e => setNewProduct({ ...newProduct, location: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Categoría</Label>
-              <select
-                value={newProduct.category_id || ''}
-                onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}
-                className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Selecciona una categoría</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            <label htmlFor="supplier">Proveedor</label>
-            <select
-              id="supplier"
-              value={newProduct.supplier_id || ''}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, supplier_id: e.target.value || null })
-              }
-              className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
+          <div className="overflow-y-auto max-h-[calc(85vh-140px)] pr-2">
+            <form
+              className="grid gap-3"
+              onSubmit={e => {
+                e.preventDefault();
+                handleAddProduct();
+              }}
             >
-              <option value="">-- Selecciona un proveedor --</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-            <Button type="submit">Guardar Producto</Button>
-          </form>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="name">Nombre del Producto*</Label>
+                  <Input
+                    id="name"
+                    value={newProduct.name}
+                    onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="code">Código</Label>
+                  <Input
+                    id="code"
+                    value={newProduct.code || ''}
+                    onChange={e => setNewProduct({ ...newProduct, code: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="stock">Stock Inicial*</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    value={newProduct.stock}
+                    onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="min_stock">Stock Mínimo*</Label>
+                  <Input
+                    id="min_stock"
+                    type="number"
+                    value={newProduct.min_stock}
+                    onChange={e => setNewProduct({ ...newProduct, min_stock: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="price">Precio Venta*</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={newProduct.price}
+                    onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="cost">Costo</Label>
+                  <Input
+                    id="cost"
+                    type="number"
+                    value={newProduct.cost || ''}
+                    onChange={e => setNewProduct({ ...newProduct, cost: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="brand">Marca</Label>
+                  <Input
+                    id="brand"
+                    value={newProduct.brand || ''}
+                    onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="location">Ubicación</Label>
+                  <Input
+                    id="location"
+                    value={newProduct.location || ''}
+                    onChange={e => setNewProduct({ ...newProduct, location: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <Label htmlFor="description">Descripción</Label>
+                <Input
+                  id="description"
+                  value={newProduct.description || ''}
+                  onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="category">Categoría</Label>
+                  <select
+                    id="category"
+                    value={newProduct.category_id || ''}
+                    onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="supplier">Proveedor</Label>
+                  <select
+                    id="supplier"
+                    value={newProduct.supplier_id || ''}
+                    onChange={(e) =>
+                      setNewProduct({ ...newProduct, supplier_id: e.target.value || null })
+                    }
+                    className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                  >
+                    <option value="">Selecciona un proveedor</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <Button type="submit" className="w-full mt-2">Guardar Producto</Button>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -714,7 +741,7 @@ export function InventoryDashboard() {
 
       {/* Diálogo Editar Producto */}
       <Dialog open={activeDialog === 'edit'} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Producto</DialogTitle>
             <DialogDescription>
@@ -722,160 +749,171 @@ export function InventoryDashboard() {
             </DialogDescription>
           </DialogHeader>
           {editProduct && (
-            <form
-              className="grid gap-4"
-              onSubmit={async e => {
-                e.preventDefault();
-                if (!editProduct) return;
+            <div className="overflow-y-auto max-h-[calc(85vh-140px)] pr-2">
+              <form
+                className="grid gap-3"
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (!editProduct) return;
 
-                const productToUpdate = {
-                  name: editProduct.name,
-                  code: editProduct.code,
-                  description: editProduct.description,
-                  brand: editProduct.brand,
-                  location: editProduct.location,
-                  stock: Number(editProduct.stock),
-                  min_stock: Number(editProduct.min_stock),
-                  price: Number(editProduct.price),
-                  cost: Number(editProduct.cost),
-                  category_id: editProduct.category_id,
-                  supplier_id: editProduct.supplier_id || null
-                };
+                  const productToUpdate = {
+                    name: editProduct.name,
+                    code: editProduct.code,
+                    description: editProduct.description,
+                    brand: editProduct.brand,
+                    location: editProduct.location,
+                    stock: Number(editProduct.stock),
+                    min_stock: Number(editProduct.min_stock),
+                    price: Number(editProduct.price),
+                    cost: Number(editProduct.cost),
+                    category_id: editProduct.category_id,
+                    supplier_id: editProduct.supplier_id || null
+                  };
 
-                const { error } = await supabase
-                  .from('products')
-                  .update(productToUpdate)
-                  .eq('id', editProduct.id);
-
-                if (!error) {
-                  closeDialog();
-                  const { data: updatedProducts } = await supabase
+                  const { error } = await supabase
                     .from('products')
-                    .select(`
-                      *,
-                      categories(id, name),
-                      suppliers(id, name)
-                    `);
-                  if (updatedProducts) setProducts(updatedProducts);
-                } else {
-                  console.error("Error al actualizar:", error);
-                }
-              }}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="edit_name">Nombre del Producto*</Label>
-                <Input
-                  id="edit_name"
-                  value={editProduct.name || ''}
-                  onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_code">Código</Label>
-                <Input
-                  id="edit_code"
-                  value={editProduct.code || ''}
-                  onChange={e => setEditProduct({ ...editProduct, code: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_stock">Stock Inicial*</Label>
+                    .update(productToUpdate)
+                    .eq('id', editProduct.id);
+
+                  if (!error) {
+                    closeDialog();
+                    const { data: updatedProducts } = await supabase
+                      .from('products')
+                      .select(`
+                        *,
+                        categories(id, name),
+                        suppliers(id, name)
+                      `);
+                    if (updatedProducts) setProducts(updatedProducts);
+                  } else {
+                    console.error("Error al actualizar:", error);
+                  }
+                }}
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_name">Nombre del Producto*</Label>
+                    <Input
+                      id="edit_name"
+                      value={editProduct.name || ''}
+                      onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_code">Código</Label>
+                    <Input
+                      id="edit_code"
+                      value={editProduct.code || ''}
+                      onChange={e => setEditProduct({ ...editProduct, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_stock">Stock</Label>
+                    <Input
+                      id="edit_stock"
+                      type="number"
+                      value={editProduct.stock}
+                      onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_min_stock">Stock Mín.</Label>
+                    <Input
+                      id="edit_min_stock"
+                      type="number"
+                      value={editProduct.min_stock}
+                      onChange={e => setEditProduct({ ...editProduct, min_stock: Number(e.target.value) })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_price">Precio</Label>
+                    <Input
+                      id="edit_price"
+                      type="number"
+                      value={editProduct.price}
+                      onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_cost">Costo</Label>
+                    <Input
+                      id="edit_cost"
+                      type="number"
+                      value={editProduct.cost || ''}
+                      onChange={e => setEditProduct({ ...editProduct, cost: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_brand">Marca</Label>
+                    <Input
+                      id="edit_brand"
+                      value={editProduct.brand || ''}
+                      onChange={e => setEditProduct({ ...editProduct, brand: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_location">Ubicación</Label>
+                    <Input
+                      id="edit_location"
+                      value={editProduct.location || ''}
+                      onChange={e => setEditProduct({ ...editProduct, location: e.target.value })}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <Label htmlFor="edit_description">Descripción</Label>
                   <Input
-                    id="edit_stock"
-                    type="number"
-                    value={editProduct.stock}
-                    onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
-                    required
+                    id="edit_description"
+                    value={editProduct.description || ''}
+                    onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_min_stock">Stock Mínimo*</Label>
-                  <Input
-                    id="edit_min_stock"
-                    type="number"
-                    value={editProduct.min_stock}
-                    onChange={e => setEditProduct({ ...editProduct, min_stock: Number(e.target.value) })}
-                    required
-                  />
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_category">Categoría</Label>
+                    <select
+                      id="edit_category"
+                      value={editProduct.category_id || ''}
+                      onChange={e => setEditProduct({ ...editProduct, category_id: e.target.value })}
+                      className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                    >
+                      <option value="">Selecciona una categoría</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit_supplier">Proveedor</Label>
+                    <select
+                      id="edit_supplier"
+                      value={editProduct.supplier_id || ''}
+                      onChange={e => setEditProduct({ ...editProduct, supplier_id: e.target.value || null })}
+                      className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                    >
+                      <option value="">Selecciona un proveedor</option>
+                      {suppliers.map(supplier => (
+                        <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_price">Precio de Venta*</Label>
-                  <Input
-                    id="edit_price"
-                    type="number"
-                    value={editProduct.price}
-                    onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_cost">Costo</Label>
-                  <Input
-                    id="edit_cost"
-                    type="number"
-                    value={editProduct.cost || ''}
-                    onChange={e => setEditProduct({ ...editProduct, cost: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_description">Descripción</Label>
-                <Input
-                  id="edit_description"
-                  value={editProduct.description || ''}
-                  onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_brand">Marca</Label>
-                <Input
-                  id="edit_brand"
-                  value={editProduct.brand || ''}
-                  onChange={e => setEditProduct({ ...editProduct, brand: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_location">Ubicación</Label>
-                <Input
-                  id="edit_location"
-                  value={editProduct.location || ''}
-                  onChange={e => setEditProduct({ ...editProduct, location: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Categoría</Label>
-                <select
-                  value={editProduct.category_id || ''}
-                  onChange={e => setEditProduct({ ...editProduct, category_id: e.target.value })}
-                  className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Selecciona una categoría</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <div className="space-y-2">
-                  <Label>Proveedor</Label>
-                  <select
-                    value={editProduct.supplier_id || ''}
-                    onChange={e => setEditProduct({ ...editProduct, supplier_id: e.target.value })}
-                    className="border border-input bg-background text-foreground rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Selecciona un proveedor</option>
-                    {suppliers.map(supplier => (
-                      <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <Button type="submit">Guardar Cambios</Button>
-            </form>
+                
+                <Button type="submit" className="w-full mt-2">Guardar Cambios</Button>
+              </form>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -920,18 +958,22 @@ export function InventoryDashboard() {
                     </TableCell>
 
                     <TableCell className="min-w-[120px]">
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex gap-2 justify-end items-center">
                         <Button
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => openDialog('editCategory', cat)}
+                          className="h-8 w-8"
+                          title="Editar categoría"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="destructive"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => openDialog('confirmDeleteCategory', cat)}
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Eliminar categoría"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
