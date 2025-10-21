@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { toast } from 'sonner';
-import { Plus, Minus, Trash2, FileText, Calculator, CheckCircle, ChevronsUpDown, Eye, Download, Edit, Search, RefreshCw } from 'lucide-react';
+import { Plus, Minus, Trash2, FileText, Calculator, CheckCircle, ChevronsUpDown, Eye, Download, Edit, Search, RefreshCw, Printer } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
 import { Customer, CustomerInvoice } from './customer-management';
@@ -118,10 +118,14 @@ export function BillingSystem() {
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showEditStatusDialog, setShowEditStatusDialog] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Función para cargar facturas - CORREGIDA PARA BÚSQUEDA EN ESPAÑOL
   const loadInvoices = async (searchTerm: string = '') => {
-    setInvoicesLoading(true);
+    // Solo mostrar skeleton la primera vez
+    if (!hasLoadedOnce) {
+      setInvoicesLoading(true);
+    }
     try {
       // Sin búsqueda, cargar normalmente
       if (!searchTerm.trim()) {
@@ -331,6 +335,7 @@ export function BillingSystem() {
       toast.error('Error al cargar facturas');
     } finally {
       setInvoicesLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -693,7 +698,7 @@ export function BillingSystem() {
     }
   }, [systemSettings]);
 
-  // Función para generar PDF de la factura - ACTUALIZADA CON TRADUCCIONES
+  // Función para generar PDF CARTA (formato completo) - ACTUALIZADA CON TRADUCCIONES
   const generatePDF = async (invoice: any) => {
     try {
       const fullInvoice = await getInvoiceDetails(invoice.id);
@@ -855,6 +860,227 @@ export function BillingSystem() {
     }
   };
 
+  // Función para generar TICKET TÉRMICO (formato pequeño para impresoras de ticket)
+  const generateTicket = async (invoice: any) => {
+    try {
+      const fullInvoice = await getInvoiceDetails(invoice.id);
+      if (!fullInvoice) return;
+
+      // Crear PDF con ancho de ticket térmico (80mm)
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [80, 200] // 80mm de ancho, altura se ajustará después
+      });
+
+      let y = 8;
+      const margin = 4;
+      const maxWidth = 72;
+      const lineHeight = 4;
+
+      // Función auxiliar para centrar texto
+      const centerText = (text: string, yPos: number) => {
+        const textWidth = doc.getTextWidth(text);
+        const xPos = (80 - textWidth) / 2;
+        doc.text(text, xPos, yPos);
+      };
+
+      // Función auxiliar para agregar línea de separación
+      const addSeparator = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        centerText('- - - - - - - - - - - - - - - - - - - - -', y);
+        y += 3;
+      };
+
+      // ===== ENCABEZADO =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      centerText(systemSettings?.companyName || 'MI EMPRESA', y);
+      y += 5;
+
+      // Información de la empresa
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      if (systemSettings?.companyNit) {
+        centerText(`NIT: ${systemSettings.companyNit}`, y);
+        y += 3;
+      }
+      if (systemSettings?.companyAddress) {
+        centerText(systemSettings.companyAddress, y);
+        y += 3;
+      }
+      if (systemSettings?.companyPhone) {
+        centerText(`Tel: ${systemSettings.companyPhone}`, y);
+        y += 3;
+      }
+
+      y += 2;
+      addSeparator();
+
+      // ===== INFORMACIÓN DE LA FACTURA =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      centerText('FACTURA DE VENTA', y);
+      y += 5;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text(`No: ${fullInvoice.invoice_number}`, margin, y);
+      y += 3;
+      doc.text(`Fecha: ${new Date(fullInvoice.invoice_date).toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`, margin, y);
+      y += 3;
+      doc.text(`Estado: ${translateStatus(fullInvoice.status)}`, margin, y);
+      y += 4;
+
+      addSeparator();
+
+      // ===== INFORMACIÓN DEL CLIENTE =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('CLIENTE:', margin, y);
+      y += 3;
+      
+      doc.setFont('helvetica', 'normal');
+      const customerName = fullInvoice.customer?.name || 'N/A';
+      const nameLines = doc.splitTextToSize(customerName, maxWidth);
+      doc.text(nameLines, margin, y);
+      y += nameLines.length * 3;
+      
+      doc.text(`Doc: ${fullInvoice.customer?.document || 'N/A'}`, margin, y);
+      y += 4;
+
+      addSeparator();
+
+      // ===== PRODUCTOS =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('CANT', margin, y);
+      doc.text('PRODUCTO', margin + 8, y);
+      doc.text('TOTAL', 68, y);
+      y += 3;
+      addSeparator();
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      
+      fullInvoice.invoice_items?.forEach((item: any) => {
+        // Cantidad
+        doc.text(item.quantity.toString(), margin, y);
+        
+        // Nombre del producto (máximo 28 caracteres por línea)
+        const productNameLines = doc.splitTextToSize(item.product_name, 45);
+        doc.text(productNameLines, margin + 8, y);
+        
+        // Total del item
+        const itemTotal = `$${(item.quantity * item.unit_price).toLocaleString('es-ES')}`;
+        const totalWidth = doc.getTextWidth(itemTotal);
+        doc.text(itemTotal, 76 - totalWidth, y);
+        
+        y += productNameLines.length * 3;
+        
+        // Código y precio unitario
+        if (item.product_code) {
+          doc.setFontSize(6);
+          doc.text(`  Cód: ${item.product_code}`, margin + 8, y);
+          y += 2.5;
+          doc.setFontSize(7);
+        }
+        
+        doc.text(`  $${item.unit_price.toLocaleString('es-ES')} c/u`, margin + 8, y);
+        y += 4;
+      });
+
+      addSeparator();
+
+      // ===== TOTALES =====
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      
+      // Subtotal
+      doc.text('Subtotal:', margin, y);
+      let subtotalText = `$${fullInvoice.subtotal.toLocaleString('es-ES')}`;
+      let subtotalWidth = doc.getTextWidth(subtotalText);
+      doc.text(subtotalText, 76 - subtotalWidth, y);
+      y += 4;
+
+      // IVA
+      doc.text(`IVA (${fullInvoice.tax_rate}%):`, margin, y);
+      let taxText = `$${fullInvoice.tax_amount.toLocaleString('es-ES')}`;
+      let taxWidth = doc.getTextWidth(taxText);
+      doc.text(taxText, 76 - taxWidth, y);
+      y += 4;
+
+      // Descuento si existe
+      if (fullInvoice.discount > 0) {
+        doc.text('Descuento:', margin, y);
+        let discountText = `-$${fullInvoice.discount.toLocaleString('es-ES')}`;
+        let discountWidth = doc.getTextWidth(discountText);
+        doc.text(discountText, 76 - discountWidth, y);
+        y += 4;
+      }
+
+      addSeparator();
+
+      // ===== TOTAL FINAL =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('TOTAL:', margin, y);
+      let totalText = `$${fullInvoice.total.toLocaleString('es-ES')}`;
+      let totalWidth = doc.getTextWidth(totalText);
+      doc.text(totalText, 76 - totalWidth, y);
+      y += 6;
+
+      addSeparator();
+
+      // ===== MÉTODO DE PAGO =====
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Pago: ${translatePaymentMethod(fullInvoice.payment_method)}`, margin, y);
+      y += 5;
+
+      // ===== NOTAS =====
+      if (fullInvoice.notes) {
+        addSeparator();
+        doc.setFont('helvetica', 'bold');
+        doc.text('Notas:', margin, y);
+        y += 3;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        const notesLines = doc.splitTextToSize(fullInvoice.notes, maxWidth);
+        doc.text(notesLines, margin, y);
+        y += notesLines.length * 2.5 + 2;
+      }
+
+      addSeparator();
+
+      // ===== PIE DE PÁGINA =====
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      centerText('¡Gracias por su compra!', y);
+      y += 4;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      centerText('Vuelva pronto', y);
+      y += 8;
+
+      // Descargar el ticket
+      doc.save(`ticket-${fullInvoice.invoice_number}.pdf`);
+      toast.success('Ticket generado correctamente');
+
+    } catch (error) {
+      console.error('Error al generar ticket:', error);
+      toast.error('Error al generar el ticket');
+    }
+  };
+
   // Función para obtener detalles completos de una factura
   const getInvoiceDetails = async (invoiceId: string) => {
     try {
@@ -933,7 +1159,7 @@ export function BillingSystem() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Nueva Factura */}
-        <div className="lg:col-span-2">
+        <div className={currentInvoice.items.length === 0 ? 'lg:col-span-2' : 'lg:col-span-2'}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1248,118 +1474,127 @@ export function BillingSystem() {
           </Card>
         </div>
 
-        {/* Facturas Recientes - ACTUALIZADA CON BUSCADOR */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Facturas</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadInvoices(invoiceSearchTerm)}
-                  disabled={invoicesLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 ${invoicesLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                {invoiceSearchTerm ? 'Resultados de búsqueda' : 'Últimas facturas generadas'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Buscador de facturas */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Buscar por número, cliente o documento..."
-                    value={invoiceSearchTerm}
-                    onChange={(e) => setInvoiceSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+        {/* Facturas Recientes - Solo mostrar cuando NO hay items en la factura */}
+        {currentInvoice.items.length === 0 && (
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Facturas Recientes</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadInvoices(invoiceSearchTerm)}
+                    disabled={invoicesLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${invoicesLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </CardTitle>
+                <CardDescription>
+                  {invoiceSearchTerm ? 'Resultados de búsqueda' : 'Últimas facturas generadas'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Buscador de facturas */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Buscar por número, cliente o documento..."
+                      value={invoiceSearchTerm}
+                      onChange={(e) => setInvoiceSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
 
-                {/* Lista de facturas */}
-                {invoicesLoading ? (
-                  <div className="text-center py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span className="text-sm text-muted-foreground">Buscando facturas...</span>
+                  {/* Lista de facturas */}
+                  {invoicesLoading ? (
+                    <TableSkeleton rows={5} columns={6} />
+                  ) : filteredInvoices.length > 0 ? (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {filteredInvoices.map((invoice) => (
+                        <div key={invoice.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-medium">{invoice.invoiceNumber}</div>
+                            {getStatusBadge(invoice.status)}
+                          </div>
+
+                          <div className="text-sm text-muted-foreground mb-2">
+                            <div className="font-medium">{invoice.customerName}</div>
+                            <div className="text-xs">
+                              {invoice.customerDocument} • {new Date(invoice.date).toLocaleDateString('es-ES')}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium">${invoice.total.toLocaleString()}</div>
+
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  const fullInvoice = await getInvoiceDetails(invoice.id);
+                                  if (fullInvoice) {
+                                    setSelectedInvoice(fullInvoice);
+                                    setShowInvoiceDialog(true);
+                                  }
+                                }}
+                                title="Ver detalles"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generatePDF(invoice)}
+                                title="Descargar PDF carta"
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateTicket(invoice)}
+                                title="Imprimir ticket térmico"
+                              >
+                                <Printer className="h-3 w-3" />
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingInvoice(invoice);
+                                  setShowEditStatusDialog(true);
+                                }}
+                                title="Editar estado"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ) : filteredInvoices.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {filteredInvoices.map((invoice) => (
-                      <div key={invoice.id} className="border rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-medium">{invoice.invoiceNumber}</div>
-                          {getStatusBadge(invoice.status)}
-                        </div>
-
-                        <div className="text-sm text-muted-foreground mb-2">
-                          <div className="font-medium">{invoice.customerName}</div>
-                          <div className="text-xs">
-                            {invoice.customerDocument} • {new Date(invoice.date).toLocaleDateString('es-ES')}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium">${invoice.total.toLocaleString()}</div>
-
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                const fullInvoice = await getInvoiceDetails(invoice.id);
-                                if (fullInvoice) {
-                                  setSelectedInvoice(fullInvoice);
-                                  setShowInvoiceDialog(true);
-                                }
-                              }}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => generatePDF(invoice)}
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingInvoice(invoice);
-                                setShowEditStatusDialog(true);
-                              }}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      {invoiceSearchTerm 
-                        ? 'No se encontraron facturas que coincidan con tu búsqueda'
-                        : 'No hay facturas recientes'
-                      }
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        {invoiceSearchTerm 
+                          ? 'No se encontraron facturas que coincidan con tu búsqueda'
+                          : 'No hay facturas recientes'
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Dialog para ver factura completa - ACTUALIZADO CON TRADUCCIONES */}
@@ -1478,7 +1713,14 @@ export function BillingSystem() {
                   onClick={() => generatePDF(selectedInvoice)}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Descargar PDF
+                  Descargar PDF Carta
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => generateTicket(selectedInvoice)}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimir Ticket
                 </Button>
                 <Button onClick={() => setShowInvoiceDialog(false)}>
                   Cerrar
