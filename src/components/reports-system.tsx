@@ -16,7 +16,8 @@ import {
   Package,
   User,
   Calendar,
-  ChevronRight
+  ChevronRight,
+  Eye
 } from 'lucide-react';
 import { useAuth, usePermissions } from './auth-context';
 import { Product } from './inventory-dashboard';
@@ -34,6 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Separator } from './ui/separator';
 
 // Interfaces ajustadas a la DB
 interface StockReport {
@@ -45,7 +48,7 @@ interface StockReport {
   report_time: string;
   current_stock: number;
   reported_stock: number;
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority: 'low' | 'medium' | 'high' | 'critical' | 'defective';
   status: 'pending' | 'reviewed' | 'resolved' | 'cancelled';
   notes: string | null;
   location: string | null;
@@ -77,8 +80,11 @@ export function ReportsSystem() {
     productId: '',
     reportedStock: '',
     notes: '',
-    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical'
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical' | 'defective'
   });
+
+  const [selectedReport, setSelectedReport] = useState<StockReport | null>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -195,6 +201,7 @@ export function ReportsSystem() {
       case 'high': return <Badge variant="secondary" className="bg-orange-500 text-white">Alto</Badge>;
       case 'medium': return <Badge variant="secondary" className="bg-yellow-500 text-white">Medio</Badge>;
       case 'low': return <Badge variant="outline">Bajo</Badge>;
+      case 'defective': return <Badge variant="destructive" className="bg-gray-900 text-white">Item Defectuoso</Badge>;
       default: return <Badge variant="outline">{priority}</Badge>;
     }
   };
@@ -344,7 +351,7 @@ export function ReportsSystem() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="priority">Prioridad</Label>
+                <Label htmlFor="priority">Prioridad / Motivo</Label>
                 <Select value={newReport.priority} onValueChange={(value: any) => setNewReport({ ...newReport, priority: value })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -354,6 +361,7 @@ export function ReportsSystem() {
                     <SelectItem value="medium">Media - Stock muy bajo</SelectItem>
                     <SelectItem value="high">Alta - Stock crítico</SelectItem>
                     <SelectItem value="critical">Crítica - Producto agotado</SelectItem>
+                    <SelectItem value="defective">Item Defectuoso - Producto con fallas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -489,6 +497,7 @@ export function ReportsSystem() {
                     <TableHead>Prioridad</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Fecha</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -531,6 +540,18 @@ export function ReportsSystem() {
                         <div className="flex items-center gap-1 text-sm"><Calendar className="h-3 w-3" />{new Date(report.report_date).toLocaleDateString('es-ES')}</div>
                         <div className="text-xs text-muted-foreground">{report.report_time}</div>
                       </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedReport(report);
+                            setShowReportDialog(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -542,6 +563,161 @@ export function ReportsSystem() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para ver detalles del reporte */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalles del Reporte</DialogTitle>
+            <DialogDescription>
+              {selectedReport?.report_number || 'Sin número de reporte'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedReport && (
+            <div className="space-y-6">
+              {/* Información del producto */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Información del Producto
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Producto</p>
+                    <p className="font-medium">{selectedReport.products?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Categoría</p>
+                    <p className="font-medium">{selectedReport.products?.categories?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ubicación</p>
+                    <p className="font-medium">{selectedReport.location || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Stock en Sistema</p>
+                    <p className="font-medium text-blue-600">{selectedReport.current_stock} unidades</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Información del reporte */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Detalles del Reporte
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Stock Contado</p>
+                    <p className="font-medium text-orange-600">{selectedReport.reported_stock} unidades</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Diferencia</p>
+                    <p className={`font-medium ${selectedReport.reported_stock !== selectedReport.current_stock ? 'text-destructive' : 'text-green-600'}`}>
+                      {selectedReport.reported_stock - selectedReport.current_stock > 0 ? '+' : ''}{selectedReport.reported_stock - selectedReport.current_stock} unidades
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Prioridad</p>
+                    <div className="mt-1">{getPriorityBadge(selectedReport.priority)}</div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estado</p>
+                    <div className="mt-1">{getStatusBadge(selectedReport.status)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Información del reportero */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Reportado Por
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Usuario</p>
+                    <p className="font-medium">{selectedReport.reporter?.name || 'Usuario desconocido'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Fecha y Hora</p>
+                    <p className="font-medium">
+                      {new Date(selectedReport.report_date).toLocaleDateString('es-ES', { 
+                        day: '2-digit', 
+                        month: 'long', 
+                        year: 'numeric' 
+                      })}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{selectedReport.report_time}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Observaciones */}
+              {selectedReport.notes && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-3">Observaciones</h3>
+                    <div className="p-4 bg-muted rounded-lg">
+                      <p className="text-sm whitespace-pre-wrap">{selectedReport.notes}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Acciones (solo para admin) */}
+              {userRole === 'admin' && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-3">Acciones</h3>
+                    <div className="flex gap-2">
+                      {selectedReport.status === 'pending' && (
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            handleStatusChange(selectedReport.id, 'reviewed');
+                            setShowReportDialog(false);
+                          }}
+                        >
+                          Marcar como Revisado
+                        </Button>
+                      )}
+                      {selectedReport.status === 'reviewed' && (
+                        <Button 
+                          variant="default" 
+                          onClick={() => {
+                            handleStatusChange(selectedReport.id, 'resolved');
+                            setShowReportDialog(false);
+                          }}
+                        >
+                          Marcar como Resuelto
+                        </Button>
+                      )}
+                      <Button 
+                        variant="destructive" 
+                        onClick={() => {
+                          handleStatusChange(selectedReport.id, 'cancelled');
+                          setShowReportDialog(false);
+                        }}
+                      >
+                        Cancelar Reporte
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
