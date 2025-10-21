@@ -185,9 +185,9 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full max-w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-full">
         {/* Gráfico de ventas */}
-        <Card className="lg:col-span-2 w-full max-w-full">
+        <Card className="w-full max-w-full">
           <CardHeader>
             <CardTitle>Tendencia de Ventas</CardTitle>
             <CardDescription>Ventas mensuales y productos vendidos</CardDescription>
@@ -217,24 +217,43 @@ export function DashboardOverview() {
                 No hay ventas por categoría registradas.
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryData.length > 0 ? categoryData : [{ name: 'Sin datos', value: 0, color: '#ccc' }]}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {(categoryData.length > 0 ? categoryData : [{ name: 'Sin datos', value: 0, color: '#ccc' }]).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="space-y-4">
+                {/* Gráfica circular más pequeña */}
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={false}
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                
+                {/* Leyenda de categorías */}
+                <div className="grid grid-cols-1 gap-2">
+                  {categoryData.map((category, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="truncate">{category.name}</span>
+                      </div>
+                      <span className="font-medium ml-2">{category.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -401,7 +401,7 @@ export function InventoryDashboard() {
 
       {/* Búsqueda y acciones */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative flex-1 w-full sm:max-w-sm">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Buscar productos..."
@@ -410,26 +410,17 @@ export function InventoryDashboard() {
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex gap-2">
           {userRole === 'admin' && (
-            <Button 
-              variant="secondary" 
-              onClick={() => openDialog('manageCategories')}
-              className="flex-1 sm:flex-none"
-            >
-              <ListTree className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Gestionar Categorías</span>
-              <span className="sm:hidden">Categorías</span>
+            <Button variant="secondary" onClick={() => openDialog('manageCategories')}>
+              <ListTree className="h-4 w-4 mr-2" />
+              Gestionar Categorías
             </Button>
           )}
           {canEdit && (
-            <Button 
-              onClick={() => openDialog('add')}
-              className="flex-1 sm:flex-none"
-            >
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Agregar Producto</span>
-              <span className="sm:hidden">Agregar</span>
+            <Button onClick={() => openDialog('add')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar Producto
             </Button>
           )}
         </div>
@@ -497,28 +488,24 @@ export function InventoryDashboard() {
 
                     {/* Acciones */}
                     <TableCell>
-                      <div className="flex gap-2 items-center">
+                      <div className="flex space-x-2">
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
                           onClick={() => openDialog('detail', product)}
-                          className="h-8 w-8"
-                          title="Ver detalles"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         {canEdit && (
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
                             onClick={() =>
                               openDialog('edit', {
                                 ...product,
                                 supplier_id: (product as any).suppliers?.id || ''
                               })
                             }
-                            className="h-8 w-8"
-                            title="Editar producto"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -741,7 +728,7 @@ export function InventoryDashboard() {
 
       {/* Diálogo Editar Producto */}
       <Dialog open={activeDialog === 'edit'} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-h-[85vh] max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Producto</DialogTitle>
             <DialogDescription>
@@ -749,178 +736,165 @@ export function InventoryDashboard() {
             </DialogDescription>
           </DialogHeader>
           {editProduct && (
-            <div className="overflow-y-auto max-h-[calc(85vh-140px)] pr-2">
-              <form
-                className="grid gap-3"
-                onSubmit={async e => {
-                  e.preventDefault();
-                  if (!editProduct) return;
+            <form
+              className="grid gap-4"
+              onSubmit={async e => {
+                e.preventDefault();
+                if (!editProduct) return;
 
-                  const productToUpdate = {
-                    name: editProduct.name,
-                    code: editProduct.code,
-                    description: editProduct.description,
-                    brand: editProduct.brand,
-                    location: editProduct.location,
-                    stock: Number(editProduct.stock),
-                    min_stock: Number(editProduct.min_stock),
-                    price: Number(editProduct.price),
-                    cost: Number(editProduct.cost),
-                    category_id: editProduct.category_id,
-                    supplier_id: editProduct.supplier_id || null
-                  };
+                const productToUpdate = {
+                  name: editProduct.name,
+                  code: editProduct.code,
+                  description: editProduct.description,
+                  brand: editProduct.brand,
+                  location: editProduct.location,
+                  stock: Number(editProduct.stock),
+                  min_stock: Number(editProduct.min_stock),
+                  price: Number(editProduct.price),
+                  cost: Number(editProduct.cost),
+                  category_id: editProduct.category_id,
+                  supplier_id: editProduct.supplier_id || null
+                };
 
-                  const { error } = await supabase
+                const { error } = await supabase
+                  .from('products')
+                  .update(productToUpdate)
+                  .eq('id', editProduct.id);
+
+                if (!error) {
+                  closeDialog();
+                  const { data: updatedProducts } = await supabase
                     .from('products')
-                    .update(productToUpdate)
-                    .eq('id', editProduct.id);
-
-                  if (!error) {
-                    closeDialog();
-                    const { data: updatedProducts } = await supabase
-                      .from('products')
-                      .select(`
-                        *,
-                        categories(id, name),
-                        suppliers(id, name)
-                      `);
-                    if (updatedProducts) setProducts(updatedProducts);
-                  } else {
-                    console.error("Error al actualizar:", error);
-                  }
-                }}
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_name">Nombre del Producto*</Label>
-                    <Input
-                      id="edit_name"
-                      value={editProduct.name || ''}
-                      onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_code">Código</Label>
-                    <Input
-                      id="edit_code"
-                      value={editProduct.code || ''}
-                      onChange={e => setEditProduct({ ...editProduct, code: e.target.value })}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_stock">Stock</Label>
-                    <Input
-                      id="edit_stock"
-                      type="number"
-                      value={editProduct.stock}
-                      onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_min_stock">Stock Mín.</Label>
-                    <Input
-                      id="edit_min_stock"
-                      type="number"
-                      value={editProduct.min_stock}
-                      onChange={e => setEditProduct({ ...editProduct, min_stock: Number(e.target.value) })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_price">Precio</Label>
-                    <Input
-                      id="edit_price"
-                      type="number"
-                      value={editProduct.price}
-                      onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_cost">Costo</Label>
-                    <Input
-                      id="edit_cost"
-                      type="number"
-                      value={editProduct.cost || ''}
-                      onChange={e => setEditProduct({ ...editProduct, cost: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_brand">Marca</Label>
-                    <Input
-                      id="edit_brand"
-                      value={editProduct.brand || ''}
-                      onChange={e => setEditProduct({ ...editProduct, brand: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_location">Ubicación</Label>
-                    <Input
-                      id="edit_location"
-                      value={editProduct.location || ''}
-                      onChange={e => setEditProduct({ ...editProduct, location: e.target.value })}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <Label htmlFor="edit_description">Descripción</Label>
+                    .select(`
+                      *,
+                      categories(id, name),
+                      suppliers(id, name)
+                    `);
+                  if (updatedProducts) setProducts(updatedProducts);
+                } else {
+                  console.error("Error al actualizar:", error);
+                }
+              }}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="edit_name">Nombre del Producto*</Label>
+                <Input
+                  id="edit_name"
+                  value={editProduct.name || ''}
+                  onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_code">Código</Label>
+                <Input
+                  id="edit_code"
+                  value={editProduct.code || ''}
+                  onChange={e => setEditProduct({ ...editProduct, code: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_stock">Stock Inicial*</Label>
                   <Input
-                    id="edit_description"
-                    value={editProduct.description || ''}
-                    onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
+                    id="edit_stock"
+                    type="number"
+                    value={editProduct.stock}
+                    onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
+                    required
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_category">Categoría</Label>
-                    <select
-                      id="edit_category"
-                      value={editProduct.category_id || ''}
-                      onChange={e => setEditProduct({ ...editProduct, category_id: e.target.value })}
-                      className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                    >
-                      <option value="">Selecciona una categoría</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit_supplier">Proveedor</Label>
-                    <select
-                      id="edit_supplier"
-                      value={editProduct.supplier_id || ''}
-                      onChange={e => setEditProduct({ ...editProduct, supplier_id: e.target.value || null })}
-                      className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                    >
-                      <option value="">Selecciona un proveedor</option>
-                      {suppliers.map(supplier => (
-                        <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_min_stock">Stock Mínimo*</Label>
+                  <Input
+                    id="edit_min_stock"
+                    type="number"
+                    value={editProduct.min_stock}
+                    onChange={e => setEditProduct({ ...editProduct, min_stock: Number(e.target.value) })}
+                    required
+                  />
                 </div>
-                
-                <Button type="submit" className="w-full mt-2">Guardar Cambios</Button>
-              </form>
-            </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_price">Precio de Venta*</Label>
+                  <Input
+                    id="edit_price"
+                    type="number"
+                    value={editProduct.price}
+                    onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_cost">Costo</Label>
+                  <Input
+                    id="edit_cost"
+                    type="number"
+                    value={editProduct.cost || ''}
+                    onChange={e => setEditProduct({ ...editProduct, cost: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_description">Descripción</Label>
+                <Input
+                  id="edit_description"
+                  value={editProduct.description || ''}
+                  onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_brand">Marca</Label>
+                <Input
+                  id="edit_brand"
+                  value={editProduct.brand || ''}
+                  onChange={e => setEditProduct({ ...editProduct, brand: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_location">Ubicación</Label>
+                <Input
+                  id="edit_location"
+                  value={editProduct.location || ''}
+                  onChange={e => setEditProduct({ ...editProduct, location: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Categoría</Label>
+                <select
+                  value={editProduct.category_id || ''}
+                  onChange={e => setEditProduct({ ...editProduct, category_id: e.target.value })}
+                  className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                >
+                  <option value="">Selecciona una categoría</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Proveedor</Label>
+                <select
+                  value={editProduct.supplier_id || ''}
+                  onChange={e => setEditProduct({ ...editProduct, supplier_id: e.target.value || null })}
+                  className="border border-input bg-background text-foreground rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                >
+                  <option value="">Selecciona un proveedor</option>
+                  {suppliers.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit">Guardar Cambios</Button>
+            </form>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Diálogo Gestionar Categorías */}
       <Dialog open={activeDialog === 'manageCategories'} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Gestionar Categorías</DialogTitle>
             <DialogDescription>Agrega, edita o elimina las categorías de productos.</DialogDescription>
@@ -929,63 +903,63 @@ export function InventoryDashboard() {
             <Plus className="h-4 w-4 mr-2" />
             Nueva Categoría
           </Button>
-          <div className="overflow-y-auto flex-1 border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-background">
-                  <TableHead className="sticky top-0 bg-background z-10">Nombre</TableHead>
-                  <TableHead className="sticky top-0 bg-background z-10">Descripción</TableHead>
-                  <TableHead className="sticky top-0 bg-background z-10 text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map(cat => (
-                  <TableRow key={cat.id}>
-                    <TableCell className="min-w-[150px] max-w-[200px]">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-4 w-4 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: cat.color || '#ccc' }}
-                        ></span>
-                        <span className="truncate">{cat.name}</span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="min-w-[300px] max-w-[500px]">
-                      <div className="line-clamp-2 text-sm" title={cat.description || ''}>
-                        {cat.description || '-'}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="min-w-[120px]">
-                      <div className="flex gap-2 justify-end items-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDialog('editCategory', cat)}
-                          className="h-8 w-8"
-                          title="Editar categoría"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDialog('confirmDeleteCategory', cat)}
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          title="Eliminar categoría"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <div className="overflow-auto flex-1 border rounded-md">
+            <div className="min-w-[600px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-background">
+                    <TableHead className="sticky top-0 bg-background z-10 w-[200px]">Nombre</TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10 w-[250px]">Descripción</TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10 w-[150px] text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {categories.map(cat => (
+                    <TableRow key={cat.id}>
+                      <TableCell className="w-[200px]">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="h-4 w-4 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: cat.color || '#ccc' }}
+                          ></span>
+                          <span className="whitespace-nowrap">{cat.name}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="w-[250px]">
+                        <div className="max-w-[230px] line-clamp-2" title={cat.description || ''}>
+                          {cat.description || '-'}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="w-[150px]">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDialog('editCategory', cat)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => openDialog('confirmDeleteCategory', cat)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </DialogContent>
-      </Dialog>      {/* Diálogo Agregar Categoría */}
+      </Dialog>
+
+      {/* Diálogo Agregar Categoría */}
       <Dialog open={activeDialog === 'addCategory'} onOpenChange={(open) => !open && setActiveDialog('manageCategories')}>
         <DialogContent>
           <DialogHeader>

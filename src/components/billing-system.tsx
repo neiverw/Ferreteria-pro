@@ -1157,9 +1157,9 @@ export function BillingSystem() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Nueva Factura */}
-        <div className="md:col-span-1 lg:col-span-2">
+        <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1474,9 +1474,10 @@ export function BillingSystem() {
           </Card>
         </div>
 
-        {/* Facturas Recientes */}
-        <div>
-          <Card>
+        {/* Facturas Recientes - Ocultar cuando hay productos en la factura */}
+        {(!currentInvoice.items || currentInvoice.items.length === 0) && (
+          <div>
+            <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Facturas Recientes</span>
@@ -1593,6 +1594,7 @@ export function BillingSystem() {
               </CardContent>
             </Card>
           </div>
+        )}
       </div>
 
       {/* Dialog para ver factura completa - ACTUALIZADO CON TRADUCCIONES */}

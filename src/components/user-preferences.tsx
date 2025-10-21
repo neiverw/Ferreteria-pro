@@ -75,16 +75,16 @@ export function UserPreferences() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Preferencias de Usuario</h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Personaliza la apariencia del sistema según tus preferencias
+    <div className="space-y-4 max-w-lg mx-auto px-4">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold tracking-tight">Preferencias de Usuario</h2>
+        <p className="text-sm text-muted-foreground">
+          Personaliza la apariencia de tu aplicación
         </p>
       </div>
 
       <Tabs defaultValue="appearance" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 max-w-md">
+        <TabsList className="grid w-full grid-cols-1 max-w-xs mx-auto">
           <TabsTrigger value="appearance">
             <Monitor className="h-4 w-4 mr-2" />
             Apariencia
@@ -104,13 +104,13 @@ export function UserPreferences() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-2xl">
+                            <div className="grid grid-cols-2 gap-3">
                 {/* Opción Modo Claro */}
                 <button
                   type="button"
                   onClick={() => setLocalTheme('light')}
                   className={`
-                    cursor-pointer rounded-lg border-2 p-3 sm:p-4 transition-all hover:scale-105
+                    cursor-pointer rounded-lg border-2 p-3 transition-all hover:scale-105
                     ${localTheme === 'light' 
                       ? 'border-primary bg-primary/10 shadow-md' 
                       : 'border-border hover:border-primary/50 hover:bg-primary/5'
@@ -118,11 +118,11 @@ export function UserPreferences() {
                   `}
                 >
                   <div className="space-y-2">
-                    <div className="flex items-center justify-center w-full h-20 sm:h-24 rounded border border-gray-300" style={{ backgroundColor: '#ffffff' }}>
-                      <Sun className="h-6 w-6 sm:h-8 sm:w-8" style={{ color: '#f59e0b' }} />
+                    <div className="flex items-center justify-center w-full h-20 rounded border border-gray-300" style={{ backgroundColor: '#ffffff' }}>
+                      <Sun className="h-7 w-7" style={{ color: '#f59e0b' }} />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm sm:text-base font-medium text-foreground">Modo Claro</p>
+                      <p className="text-sm font-medium text-foreground">Modo Claro</p>
                       <p className="text-xs text-muted-foreground">Fondo blanco</p>
                     </div>
                   </div>
@@ -133,7 +133,7 @@ export function UserPreferences() {
                   type="button"
                   onClick={() => setLocalTheme('dark')}
                   className={`
-                    cursor-pointer rounded-lg border-2 p-3 sm:p-4 transition-all hover:scale-105
+                    cursor-pointer rounded-lg border-2 p-3 transition-all hover:scale-105
                     ${localTheme === 'dark' 
                       ? 'border-primary bg-primary/10 shadow-md' 
                       : 'border-border hover:border-primary/50 hover:bg-primary/5'
@@ -141,11 +141,11 @@ export function UserPreferences() {
                   `}
                 >
                   <div className="space-y-2">
-                    <div className="flex items-center justify-center w-full h-20 sm:h-24 rounded border border-gray-600" style={{ backgroundColor: '#1f2937' }}>
-                      <Moon className="h-6 w-6 sm:h-8 sm:w-8" style={{ color: '#60a5fa' }} />
+                    <div className="flex items-center justify-center w-full h-20 rounded border border-gray-600" style={{ backgroundColor: '#1f2937' }}>
+                      <Moon className="h-7 w-7" style={{ color: '#60a5fa' }} />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm sm:text-base font-medium text-foreground">Modo Oscuro</p>
+                      <p className="text-sm font-medium text-foreground">Modo Oscuro</p>
                       <p className="text-xs text-muted-foreground">Fondo oscuro</p>
                     </div>
                   </div>
@@ -157,7 +157,7 @@ export function UserPreferences() {
           {/* Tamaño de Fuente */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Type className="h-5 w-5" />
                 Tamaño de Fuente
               </CardTitle>
@@ -166,13 +166,13 @@ export function UserPreferences() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl">
+              <div className="grid grid-cols-3 gap-3">
                 {/* Pequeño */}
                 <button
                   type="button"
                   onClick={() => setLocalFontSize('small')}
                   className={`
-                    cursor-pointer rounded-lg border-2 p-3 sm:p-4 transition-all hover:scale-105
+                    cursor-pointer rounded-lg border-2 p-3 transition-all hover:scale-105
                     ${localFontSize === 'small' 
                       ? 'border-primary bg-primary/10 shadow-md' 
                       : 'border-border hover:border-primary/50 hover:bg-primary/5'
@@ -180,9 +180,9 @@ export function UserPreferences() {
                   `}
                 >
                   <div className="text-center space-y-2">
-                    <Type className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-foreground" />
+                    <Type className="h-4 w-4 mx-auto text-foreground" />
                     <p className="text-xs font-medium text-foreground">Pequeño</p>
-                    <p className="text-xs text-muted-foreground hidden sm:block">14px</p>
+                    <p className="text-xs text-muted-foreground">14px</p>
                   </div>
                 </button>
 
@@ -191,7 +191,7 @@ export function UserPreferences() {
                   type="button"
                   onClick={() => setLocalFontSize('medium')}
                   className={`
-                    cursor-pointer rounded-lg border-2 p-3 sm:p-4 transition-all hover:scale-105
+                    cursor-pointer rounded-lg border-2 p-3 transition-all hover:scale-105
                     ${localFontSize === 'medium' 
                       ? 'border-primary bg-primary/10 shadow-md' 
                       : 'border-border hover:border-primary/50 hover:bg-primary/5'
@@ -199,9 +199,9 @@ export function UserPreferences() {
                   `}
                 >
                   <div className="text-center space-y-2">
-                    <Type className="h-5 w-5 sm:h-6 sm:w-6 mx-auto text-foreground" />
-                    <p className="text-xs sm:text-sm font-medium text-foreground">Mediano</p>
-                    <p className="text-xs text-muted-foreground hidden sm:block">16px</p>
+                    <Type className="h-5 w-5 mx-auto text-foreground" />
+                    <p className="text-sm font-medium text-foreground">Mediano</p>
+                    <p className="text-xs text-muted-foreground">16px</p>
                   </div>
                 </button>
 
@@ -210,7 +210,7 @@ export function UserPreferences() {
                   type="button"
                   onClick={() => setLocalFontSize('large')}
                   className={`
-                    cursor-pointer rounded-lg border-2 p-3 sm:p-4 transition-all hover:scale-105
+                    cursor-pointer rounded-lg border-2 p-3 transition-all hover:scale-105
                     ${localFontSize === 'large' 
                       ? 'border-primary bg-primary/10 shadow-md' 
                       : 'border-border hover:border-primary/50 hover:bg-primary/5'
@@ -218,9 +218,9 @@ export function UserPreferences() {
                   `}
                 >
                   <div className="text-center space-y-2">
-                    <Type className="h-6 w-6 sm:h-7 sm:w-7 mx-auto text-foreground" />
-                    <p className="text-sm sm:text-base font-medium text-foreground">Grande</p>
-                    <p className="text-xs text-muted-foreground hidden sm:block">18px</p>
+                    <Type className="h-6 w-6 mx-auto text-foreground" />
+                    <p className="text-sm font-medium text-foreground">Grande</p>
+                    <p className="text-xs text-muted-foreground">18px</p>
                   </div>
                 </button>
               </div>
@@ -228,7 +228,7 @@ export function UserPreferences() {
           </Card>
 
           {/* Botones de acción */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+          <div className="flex justify-center gap-3 pt-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -236,16 +236,16 @@ export function UserPreferences() {
                 setLocalFontSize(fontSize);
               }}
               disabled={!hasChanges}
-              className="w-full sm:w-auto"
+              className="w-28"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={!hasChanges}
-              className="w-full sm:w-auto"
+              className="w-32"
             >
-              Guardar Cambios
+              Guardar
             </Button>
           </div>
         </TabsContent>
