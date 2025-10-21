@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Package, Search, Plus, Edit, Eye, AlertTriangle, Lock, Trash2, ListTree } from 'lucide-react';
 import { usePermissions } from './auth-context';
+import { TableSkeleton } from './ui/table-skeleton';
 import { Label } from "./ui/label";
 
 // --- CORRECCIÓN: Exportar la interfaz y añadir todas las propiedades que faltan ---
@@ -318,7 +319,18 @@ export function InventoryDashboard() {
 
 
   if (loading) {
-    return <div>Cargando inventario...</div>;
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Inventario de Productos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TableSkeleton rows={10} columns={8} />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
 

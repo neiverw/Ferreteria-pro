@@ -10,14 +10,7 @@ interface SystemSettings {
 }
 
 export function useSystemSettings() {
-  const [settings, setSettings] = useState<SystemSettings>({
-    companyName: 'Ferretería Pro',
-    companyNit: '',
-    companyAddress: '',
-    companyPhone: '',
-    companyEmail: '',
-    defaultTaxRate: 16.0,
-  });
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +34,7 @@ export function useSystemSettings() {
           const settingsData = result.settings || {};
 
           const newSettings = {
-            companyName: settingsData.company_name || 'Ferretería Pro',
+            companyName: settingsData.company_name || '',
             companyNit: settingsData.company_nit || '',
             companyAddress: settingsData.company_address || '',
             companyPhone: settingsData.company_phone || '',
@@ -111,7 +104,7 @@ export function useSystemSettings() {
       }
 
       // Actualizar el estado local
-      setSettings(prev => ({ ...prev, ...newSettings }));
+      setSettings(prev => prev ? ({ ...prev, ...newSettings }) : null);
     } catch (err: any) {
       console.error('Error updating system settings:', err);
       setError(err.message);

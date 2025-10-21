@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { useToast } from './ui/use-toast';
+import { TableSkeleton } from './ui/table-skeleton';
 import { Pencil, Trash2, Plus, Search, Package } from 'lucide-react';
 
 interface Supplier {
@@ -32,6 +33,7 @@ interface Product {
 
 export function SuppliersManagement() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProductsDialogOpen, setIsProductsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,11 +55,14 @@ export function SuppliersManagement() {
 
   const fetchSuppliers = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/suppliers');
       const data = await response.json();
       setSuppliers(data);
     } catch (error) {
       toast("No se pudieron cargar los proveedores");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -199,20 +204,23 @@ export function SuppliersManagement() {
           </div>
 
           {/* Tabla */}
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Dirección</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSuppliers.map((supplier) => (
+          {loading ? (
+            <TableSkeleton rows={5} columns={6} />
+          ) : (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Contacto</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Dirección</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSuppliers.map((supplier) => (
                   <TableRow key={supplier.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="font-medium">{supplier.name}</TableCell>
                     <TableCell>{supplier.contact_name}</TableCell>
@@ -250,7 +258,8 @@ export function SuppliersManagement() {
                 )}
               </TableBody>
             </Table>
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

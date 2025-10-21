@@ -14,10 +14,11 @@ import { Plus, Minus, Trash2, FileText, Calculator, CheckCircle, ChevronsUpDown,
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
 import { Customer, CustomerInvoice } from './customer-management';
-import { useSystemSettings } from '../hooks/useSystemSettings';
+import { useSystemSettings } from '@/components/system-settings-context';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Textarea } from './ui/textarea';
+import { TableSkeleton } from './ui/table-skeleton';
 
 // Actualizar las interfaces
 interface InvoiceItem {
@@ -74,7 +75,7 @@ interface ExtendedCustomerInvoice extends CustomerInvoice {
 }
 
 export function BillingSystem() {
-  const { settings: systemSettings, loading: settingsLoading } = useSystemSettings();
+  const { settings: systemSettings } = useSystemSettings();
   // --- CORRECCIÓN: Envolver la creación del cliente en useMemo ---
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [products, setProducts] = useState<Product[]>([]);
@@ -683,13 +684,13 @@ export function BillingSystem() {
 
   // Actualizar la tasa de IVA cuando se carguen las configuraciones
   useEffect(() => {
-    if (!settingsLoading && systemSettings) {
+    if (systemSettings) {
       setCurrentInvoice(prev => ({
         ...prev,
         tax_rate: systemSettings.defaultTaxRate
       }));
     }
-  }, [systemSettings, settingsLoading]);
+  }, [systemSettings]);
 
   // Función para generar PDF de la factura - ACTUALIZADA CON TRADUCCIONES
   const generatePDF = async (invoice: any) => {
@@ -909,7 +910,18 @@ export function BillingSystem() {
   };
 
   if (loading) {
-    return <div>Cargando sistema de facturación...</div>;
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sistema de Facturación</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TableSkeleton rows={8} columns={6} />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!user) {
