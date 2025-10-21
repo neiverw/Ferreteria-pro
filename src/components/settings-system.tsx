@@ -389,20 +389,26 @@ export function SettingsSystem() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full max-w-full">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger 
-              value="users" 
-              className={activeTab === 'users' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              <Users className="h-4 w-4 mr-2" /><span className="hidden sm:inline">Gestión de </span>Usuarios
-            </TabsTrigger>
-            <TabsTrigger 
-              value="company" 
-              className={activeTab === 'company' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              <Building2 className="h-4 w-4 mr-2" /><span className="hidden sm:inline">Información de </span>Empresa
-            </TabsTrigger>
-          </TabsList>
+        <TabsList className="grid w-full md:w-auto grid-cols-2 gap-2">
+          <TabsTrigger 
+            value="users" 
+            className={`flex items-center justify-center px-4 py-2 ${
+              activeTab === 'users' ? 'bg-primary text-primary-foreground' : ''
+            }`}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            <span>Usuarios</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="company" 
+            className={`flex items-center justify-center px-4 py-2 ${
+              activeTab === 'company' ? 'bg-primary text-primary-foreground' : ''
+            }`}
+          >
+            <Building2 className="h-4 w-4 mr-2" />
+            <span>Empresa</span>
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="users" className="space-y-4 sm:space-y-6 w-full max-w-full">
           <Card>
@@ -469,39 +475,43 @@ export function SettingsSystem() {
             </CardContent>
           </Card>
 
-                <Card>
-        <CardHeader>
-          <CardTitle>Cambiar Contraseña</CardTitle>
-          <CardDescription>
-            Actualiza la contraseña de tu propia cuenta.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="new-password">Nueva Contraseña</Label>
-            <Input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          <div>
-            <Label htmlFor="confirm-password">Confirmar Nueva Contraseña</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          <Button onClick={handleChangePassword}>
-            Actualizar Contraseña
-          </Button>
-        </CardContent>
-      </Card>
+          <Card>
+  <CardHeader className="pb-4">
+    <CardTitle className="text-lg">Cambiar Contraseña</CardTitle>
+    <CardDescription className="text-sm">
+      Actualiza la contraseña de tu propia cuenta.
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-1">
+        <Label htmlFor="new-password">Nueva Contraseña</Label>
+        <Input
+          id="new-password"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="••••••••"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
+        <Input
+          id="confirm-password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="••••••••"
+        />
+      </div>
+    </div>
+    <div className="flex justify-end mt-4">
+      <Button onClick={handleChangePassword} className="w-auto">
+        Actualizar Contraseña
+      </Button>
+    </div>
+  </CardContent>
+</Card>
         </TabsContent>
         
         {/* --- AÑADIR EL CONTENIDO DE LA PESTAÑA DE EMPRESA --- */}
@@ -511,68 +521,57 @@ export function SettingsSystem() {
               <CardTitle>Información de la Empresa</CardTitle>
               <CardDescription>
                 Define el nombre y la tasa de IVA por defecto para las facturas.
-                {user?.role !== 'admin' && <span className="text-yellow-600 font-bold block mt-2">Solo los administradores pueden editar esta información.</span>}
+                {user?.role !== 'admin' && <span className="text-yellow-600 font-bold ml-2">Solo los administradores pueden editar esta información.</span>}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 w-full max-w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-full">
-                <div className="space-y-2">
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
                   <Label htmlFor="companyName">Nombre de la Empresa</Label>
                   <Input
                     id="companyName"
                     value={companySettings.companyName}
                     onChange={(e) => setCompanySettings({ ...companySettings, companyName: e.target.value })}
                     disabled={user?.role !== 'admin'}
-                    placeholder="Nombre de la empresa"
-                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyNit">NIT de la Empresa</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="companyNit">NIT</Label>
                   <Input
                     id="companyNit"
                     value={companySettings.companyNit}
                     onChange={(e) => setCompanySettings({ ...companySettings, companyNit: e.target.value })}
                     disabled={user?.role !== 'admin'}
-                    placeholder="NIT de la empresa"
-                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="companyPhone">Teléfono</Label>
                   <Input
                     id="companyPhone"
                     value={companySettings.companyPhone}
                     onChange={(e) => setCompanySettings({ ...companySettings, companyPhone: e.target.value })}
                     disabled={user?.role !== 'admin'}
-                    placeholder="Teléfono de la empresa"
-                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="companyEmail">Email</Label>
                   <Input
                     id="companyEmail"
-                    type="email"
                     value={companySettings.companyEmail}
                     onChange={(e) => setCompanySettings({ ...companySettings, companyEmail: e.target.value })}
                     disabled={user?.role !== 'admin'}
-                    placeholder="Email de la empresa"
-                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2 sm:col-span-2">
+                <div className="md:col-span-2 space-y-1">
                   <Label htmlFor="companyAddress">Dirección</Label>
                   <Input
                     id="companyAddress"
                     value={companySettings.companyAddress}
                     onChange={(e) => setCompanySettings({ ...companySettings, companyAddress: e.target.value })}
                     disabled={user?.role !== 'admin'}
-                    placeholder="Dirección de la empresa"
-                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="taxRate">Tasa de IVA (%)</Label>
                   <Input
                     id="taxRate"
@@ -583,15 +582,18 @@ export function SettingsSystem() {
                     value={companySettings.defaultTaxRate}
                     onChange={(e) => setCompanySettings({ ...companySettings, defaultTaxRate: parseFloat(e.target.value) || 0 })}
                     disabled={user?.role !== 'admin'}
-                    placeholder="16.0"
-                    className="w-full"
                   />
                 </div>
               </div>
             </CardContent>
             {user?.role === 'admin' && (
-              <CardFooter>
-                <Button onClick={handleSaveCompanySettings}>Guardar Cambios</Button>
+              <CardFooter className="flex justify-end">
+                <Button 
+                  onClick={handleSaveCompanySettings} 
+                  className="w-auto"
+                >
+                  Guardar Cambios
+                </Button>
               </CardFooter>
             )}
           </Card>

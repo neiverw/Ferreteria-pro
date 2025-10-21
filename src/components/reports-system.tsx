@@ -313,33 +313,37 @@ export function ReportsSystem() {
         {/* Crear nuevo reporte */}
         <TabsContent value="create" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Plus className="h-4 w-4" />
                 Reportar Novedad de Stock
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Informa sobre productos sin stock o con inventario crítico.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="product">Producto *</Label>
-                  <Select value={newReport.productId} onValueChange={(value) => setNewReport({ ...newReport, productId: value })}>
-                    <SelectTrigger>
+                  <Select 
+                    value={newReport.productId} 
+                    onValueChange={(value) => setNewReport({ ...newReport, productId: value })}
+                  >
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar producto" />
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
                           <div className="flex items-center justify-between w-full">
-                            <span>{product.name}</span>
-                            <div className="flex items-center gap-2 ml-4">
-                              <Badge variant={getStockStatus(product.stock, product.min_stock).variant} className="text-xs">
-                                Stock: {product.stock}
-                              </Badge>
-                            </div>
+                            <span className="text-sm">{product.name}</span>
+                            <Badge 
+                              variant={getStockStatus(product.stock, product.min_stock).variant} 
+                              className="text-xs ml-2"
+                            >
+                              Stock: {product.stock}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))}
@@ -347,7 +351,7 @@ export function ReportsSystem() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="reportedStock">Stock Actual Contado *</Label>
                   <Input
                     id="reportedStock"
@@ -355,79 +359,84 @@ export function ReportsSystem() {
                     min="0"
                     value={newReport.reportedStock}
                     onChange={(e) => setNewReport({ ...newReport, reportedStock: e.target.value })}
-                    placeholder="Cantidad verificada físicamente"
+                    placeholder="Cantidad verificada"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="priority">Prioridad / Motivo</Label>
+                  <Select 
+                    value={newReport.priority} 
+                    onValueChange={(value: any) => setNewReport({ ...newReport, priority: value })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baja - Stock disponible pero bajo</SelectItem>
+                      <SelectItem value="medium">Media - Stock muy bajo</SelectItem>
+                      <SelectItem value="high">Alta - Stock crítico</SelectItem>
+                      <SelectItem value="critical">Crítica - Producto agotado</SelectItem>
+                      <SelectItem value="defective">Item Defectuoso - Producto con fallas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="notes">Observaciones</Label>
+                  <Textarea
+                    id="notes"
+                    value={newReport.notes}
+                    onChange={(e) => setNewReport({ ...newReport, notes: e.target.value })}
+                    placeholder="Describe la situación..."
+                    className="w-full h-[38px] min-h-[38px]"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="priority">Prioridad / Motivo</Label>
-                <Select value={newReport.priority} onValueChange={(value: any) => setNewReport({ ...newReport, priority: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baja - Stock disponible pero bajo</SelectItem>
-                    <SelectItem value="medium">Media - Stock muy bajo</SelectItem>
-                    <SelectItem value="high">Alta - Stock crítico</SelectItem>
-                    <SelectItem value="critical">Crítica - Producto agotado</SelectItem>
-                    <SelectItem value="defective">Item Defectuoso - Producto con fallas</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex justify-end mt-4">
+                <Button
+                  onClick={handleCreateReport}
+                  disabled={!newReport.productId || newReport.reportedStock === ''}
+                  className="w-auto"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Crear Reporte
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observaciones</Label>
-                <Textarea
-                  id="notes"
-                  value={newReport.notes}
-                  onChange={(e) => setNewReport({ ...newReport, notes: e.target.value })}
-                  placeholder="Describe la situación, demanda del producto, clientes esperando, etc."
-                  rows={3}
-                />
-              </div>
-
-              <Button
-                onClick={handleCreateReport}
-                disabled={!newReport.productId || newReport.reportedStock === ''}
-                className="w-full"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Crear Reporte
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Alertas de stock */}
         <TabsContent value="alerts" className="space-y-4 mt-4">
-          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-            <Card className="w-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-destructive text-base sm:text-lg">
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Productos Agotados
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Card de Productos Agotados */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-destructive text-base">
+                  <AlertTriangle className="h-4 w-4" />
+                  Productos Agotados ({criticalProducts.length})
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Productos con stock cero.</CardDescription>
               </CardHeader>
               <CardContent>
                 {criticalProducts.length === 0 ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 mx-auto mb-3 sm:mb-4" />
-                    <p className="text-sm sm:text-base text-muted-foreground">¡Genial! No hay productos agotados.</p>
+                  <div className="text-center py-4">
+                    <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No hay productos agotados</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[450px] overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {criticalProducts.map((product) => (
-                      <div key={product.id} className="flex items-center justify-between p-2 sm:p-3 border border-destructive/20 rounded-lg bg-destructive/5">
+                      <div key={product.id} className="flex items-center justify-between p-2 border border-destructive/20 rounded-lg bg-destructive/5">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
-                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{product.category_name} - {product.location}</div>
+                          <div className="font-medium text-sm truncate">{product.name}</div>
+                          <div className="text-xs text-muted-foreground">{product.category_name}</div>
                         </div>
-                        <div className="text-right ml-2 flex-shrink-0">
-                          <Badge variant="destructive" className="text-xs">Agotado</Badge>
-                          <div className="text-xs text-muted-foreground mt-1">Min: {product.min_stock}</div>
-                        </div>
+                        <Badge variant="destructive" className="ml-2 text-xs">
+                          Agotado
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -435,31 +444,32 @@ export function ReportsSystem() {
               </CardContent>
             </Card>
 
-            <Card className="w-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-orange-600 text-base sm:text-lg">
-                  <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Stock Bajo
+            {/* Card de Stock Bajo */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-orange-600 text-base">
+                  <Package className="h-4 w-4" />
+                  Stock Bajo ({lowStockAlerts.length})
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Productos por debajo del stock mínimo.</CardDescription>
               </CardHeader>
               <CardContent>
                 {lowStockAlerts.length === 0 ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 mx-auto mb-3 sm:mb-4" />
-                    <p className="text-sm sm:text-base text-muted-foreground">Todos los productos tienen stock adecuado.</p>
+                  <div className="text-center py-4">
+                    <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Stock adecuado</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[450px] overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {lowStockAlerts.map((product) => (
-                      <div key={product.id} className="flex items-center justify-between p-2 sm:p-3 border border-orange-200 rounded-lg bg-orange-50">
+                      <div key={product.id} className="flex items-center justify-between p-2 border border-orange-200 rounded-lg bg-orange-50">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
-                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{product.category_name} - {product.location}</div>
+                          <div className="font-medium text-sm truncate">{product.name}</div>
+                          <div className="text-xs text-muted-foreground">{product.category_name}</div>
                         </div>
-                        <div className="text-right ml-2 flex-shrink-0">
-                          <Badge variant="secondary" className="bg-orange-500 text-white text-xs">Stock: {product.stock}</Badge>
-                          <div className="text-xs text-muted-foreground mt-1">Min: {product.min_stock}</div>
+                        <div className="text-right ml-2">
+                          <Badge variant="secondary" className="bg-orange-500 text-white text-xs">
+                            Stock: {product.stock}
+                          </Badge>
                         </div>
                       </div>
                     ))}
@@ -472,19 +482,19 @@ export function ReportsSystem() {
 
         {/* Historial de reportes */}
         <TabsContent value="history" className="space-y-4">
-          <div className="flex flex-col gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar reportes..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full"
+                className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="flex-1 text-xs sm:text-sm h-9">
+                <SelectTrigger className="w-[140px] text-xs sm:text-sm h-9">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
@@ -496,7 +506,7 @@ export function ReportsSystem() {
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="flex-1 text-xs sm:text-sm h-9">
+                <SelectTrigger className="w-[140px] text-xs sm:text-sm h-9">
                   <SelectValue placeholder="Prioridad" />
                 </SelectTrigger>
                 <SelectContent>
