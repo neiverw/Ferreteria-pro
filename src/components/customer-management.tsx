@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Separator } from './ui/separator';
+import { getColombiaTodayISO } from '@/lib/date-utils';
 import { 
   Users, 
   Search, 
@@ -179,7 +180,7 @@ export function CustomerManagement() {
       address: newCustomer.address || null,
       city: newCustomer.city || null,
       department: newCustomer.department || null,
-      registration_date: new Date().toISOString().split('T')[0],
+      registration_date: getColombiaTodayISO(),
       is_active: true,
       notes: newCustomer.notes || null
     };

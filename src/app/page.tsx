@@ -17,6 +17,7 @@ import { AuthProvider, useAuth, usePermissions } from '@/components/auth-context
 import { SystemSettingsProvider } from '@/components/system-settings-context';
 import { LoginScreen } from '@/components/login-screen';
 import { useSystemSettings } from '@/components/system-settings-context';
+import { formatColombiaDate } from '@/lib/date-utils';
 import { 
   LayoutDashboard, 
   Package, 
@@ -215,12 +216,7 @@ function AppMain() {
                   </Button>
                 </div>
                 <Badge variant="outline">
-                  {new Date().toLocaleDateString('es-ES', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
+                  {formatColombiaDate()}
                 </Badge>
               </div>
             </div>

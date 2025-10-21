@@ -19,6 +19,7 @@ import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Textarea } from './ui/textarea';
 import { TableSkeleton } from './ui/table-skeleton';
+import { getColombiaTodayISO } from '@/lib/date-utils';
 
 // Actualizar las interfaces
 interface InvoiceItem {
@@ -525,8 +526,8 @@ export function BillingSystem() {
         invoice_number,
         customer_id: currentInvoice.customer_id,
         user_id: user.id,
-        invoice_date: new Date().toISOString().split('T')[0],
-        due_date: new Date().toISOString().split('T')[0],
+        invoice_date: getColombiaTodayISO(),
+        due_date: getColombiaTodayISO(),
         subtotal: currentInvoice.subtotal,
         tax_rate: currentInvoice.tax_rate,
         tax_amount: currentInvoice.tax_amount,

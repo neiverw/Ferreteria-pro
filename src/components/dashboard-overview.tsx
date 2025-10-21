@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Package, DollarSign, Users, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { getColombiaFirstDayOfMonth } from '@/lib/date-utils';
 
 type ProductCat = {
   id: string;
@@ -35,7 +36,7 @@ export function DashboardOverview() {
         .from('invoices')
         .select('id, total')
         .eq('status', 'paid')
-        .gte('invoice_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+        .gte('invoice_date', getColombiaFirstDayOfMonth());
       if (invoices) {
         const totalVentas = invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
         setVentasMes(totalVentas);

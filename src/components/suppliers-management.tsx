@@ -39,6 +39,9 @@ export function SuppliersManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  // Caché de productos por proveedor
+  const [productsCache, setProductsCache] = useState<Record<string, Product[]>>({});
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -108,12 +111,28 @@ export function SuppliersManagement() {
   const handleViewProducts = async (supplier: Supplier) => {
     try {
       setCurrentSupplier(supplier);
+      
+      // Verificar si ya tenemos los productos en caché
+      if (productsCache[supplier.id]) {
+        setProducts(productsCache[supplier.id]);
+        setIsProductsDialogOpen(true);
+        return;
+      }
+      
+      // Si no están en caché, cargarlos
+      setLoadingProducts(true);
+      setIsProductsDialogOpen(true);
+      
       const res = await fetch(`/api/suppliers/${supplier.id}/products`);
       const data = await res.json();
+      
+      // Guardar en caché
+      setProductsCache(prev => ({ ...prev, [supplier.id]: data }));
       setProducts(data);
-      setIsProductsDialogOpen(true);
     } catch {
       toast("No se pudieron cargar los productos de este proveedor");
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -270,7 +289,9 @@ export function SuppliersManagement() {
             <DialogTitle>Productos de {currentSupplier?.name}</DialogTitle>
           </DialogHeader>
 
-          {products.length > 0 ? (
+          {loadingProducts ? (
+            <TableSkeleton rows={3} columns={6} />
+          ) : products.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>

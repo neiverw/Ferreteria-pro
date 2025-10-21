@@ -189,3 +189,16 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Fix para Tailwind v4 - Clases de color personalizadas */
+.bg-blue-900 {
+  background-color: #1e3a8a !important;
+}
+
+.bg-slate-800 {
+  background-color: #1e293b !important;
+}
+
+.bg-gray-900 {
+  background-color: #111827 !important;
+}

@@ -50,7 +50,7 @@ export function LoginScreen() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{companyName}</h1>
             <p className="text-lg text-gray-600">Sistema de Gestión e Inventario</p>
           </div>
-          
+
           {/* Credenciales de demo */}
         </div>
 
@@ -122,28 +122,6 @@ export function LoginScreen() {
                   {isLoading ? 'Verificando...' : 'Ingresar'}
                 </Button>
               </form>
-
-              {/* Info adicional para móvil */}
-              <div className="mt-6 lg:hidden">
-                <Card className="bg-gray-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Credenciales de Prueba</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="font-medium">Admin:</span> admin / admin123
-                      </div>
-                      <div>
-                        <span className="font-medium">Cajeros:</span> cajero1-2 / caja123
-                      </div>
-                      <div>
-                        <span className="font-medium">Bodega:</span> bodega1-2 / bodega123
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
             </CardContent>
           </Card>
         </div>
