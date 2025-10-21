@@ -17,6 +17,7 @@ import { AuthProvider, useAuth, usePermissions } from '@/components/auth-context
 import { SystemSettingsProvider } from '@/components/system-settings-context';
 import { LoginScreen } from '@/components/login-screen';
 import { useSystemSettings } from '@/components/system-settings-context';
+import { DynamicTitle } from '@/components/dynamic-title';
 import { formatColombiaDate } from '@/lib/date-utils';
 import { 
   LayoutDashboard, 
@@ -246,6 +247,7 @@ export default function HomePage() {
   return (
     <AuthProvider>
       <SystemSettingsProvider>
+        <DynamicTitle />
         <AppContent />
         <Toaster />
       </SystemSettingsProvider>

@@ -1,0 +1,19 @@
+# Robots.txt para Ferretería Pro
+# Cambiar según si quieres que sea indexado o no
+
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+
+# Si es una app interna/privada, descomentar estas líneas:
+# User-agent: *
+# Disallow: /
+
+# Si es pública, permitir indexación:
+# User-agent: *
+# Allow: /
+# Disallow: /api/
+# Disallow: /admin/
+
+Sitemap: https://ferreteriapro.com/sitemap.xml
