@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +13,10 @@ import { DashboardOverview } from '@/components/dashboard-overview';
 import { CustomerManagement } from '@/components/customer-management';
 import { ReportsSystem } from '@/components/reports-system';
 import { SettingsSystem } from '@/components/settings-system';
+import { UserPreferences } from '@/components/user-preferences';
 import { AuthProvider, useAuth, usePermissions } from '@/components/auth-context';
 import { SystemSettingsProvider } from '@/components/system-settings-context';
+import { ThemeProvider } from '@/components/theme-provider';
 import { LoginScreen } from '@/components/login-screen';
 import { useSystemSettings } from '@/components/system-settings-context';
 import { DynamicTitle } from '@/components/dynamic-title';
@@ -31,10 +33,11 @@ import {
   LogOut,
   Crown,
   User,
-  CreditCard
+  CreditCard,
+  Palette
 } from 'lucide-react';
 
-type ActiveView = 'dashboard' | 'inventory' | 'billing' | 'customers' | 'reports' | 'settings' | 'suppliers';
+type ActiveView = 'dashboard' | 'inventory' | 'billing' | 'customers' | 'reports' | 'settings' | 'suppliers' | 'preferences';
 
 const navigationItems = [
   { id: 'dashboard' as ActiveView, label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard' },
@@ -44,6 +47,11 @@ const navigationItems = [
   { id: 'customers' as ActiveView, label: 'Clientes', icon: Users, permission: 'customers' },
   { id: 'reports' as ActiveView, label: 'Reportes', icon: BarChart3, permission: 'reports' },
   { id: 'settings' as ActiveView, label: 'Configuración', icon: Settings, permission: 'settings' },
+];
+
+// Elementos visibles para todos los usuarios (sin restricción de permisos)
+const userNavigationItems = [
+  { id: 'preferences' as ActiveView, label: 'Preferencias', icon: Palette },
 ];
 
 function AppSidebar({ activeView, setActiveView }: { 
@@ -88,6 +96,25 @@ function AppSidebar({ activeView, setActiveView }: {
               </Button>
             );
           })}
+          
+          {/* Separador */}
+          <div className="border-t my-2" />
+          
+          {/* Elementos para todos los usuarios */}
+          {userNavigationItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                variant={activeView === item.id ? "default" : "ghost"}
+                className="w-full justify-start"
+                onClick={() => setActiveView(item.id)}
+              >
+                <Icon className="h-4 w-4 mr-2" />
+                {item.label}
+              </Button>
+            );
+          })}
         </nav>
         
         {/* Información del rol del usuario */}
@@ -111,7 +138,9 @@ function AppMain() {
 
   // Verificar si el usuario tiene acceso a la vista actual al cambiar de usuario
   React.useEffect(() => {
-    if (user && !canAccess(activeView)) {
+    // Verificar si la vista actual requiere permisos
+    const currentItem = navigationItems.find(item => item.id === activeView);
+    if (user && currentItem && !canAccess(currentItem.permission)) {
       // Redirigir a la primera vista permitida
       const allowedItems = navigationItems.filter(item => canAccess(item.permission));
       if (allowedItems.length > 0) {
@@ -122,6 +151,14 @@ function AppMain() {
 
   // Función mejorada para cambiar de vista con verificación de permisos
   const handleViewChange = (view: ActiveView) => {
+    // Verificar si es una vista de usuario (sin restricción de permisos)
+    const userItem = userNavigationItems.find(item => item.id === view);
+    if (userItem) {
+      setActiveView(view);
+      return;
+    }
+    
+    // Verificar permisos para vistas del sistema
     const item = navigationItems.find(item => item.id === view);
     if (item && canAccess(item.permission)) {
       setActiveView(view);
@@ -172,13 +209,23 @@ function AppMain() {
         <div style={{ display: activeView === 'settings' ? 'block' : 'none' }}>
           {canAccess('settings') && <SettingsSystem />}
         </div>
+        <div style={{ display: activeView === 'preferences' ? 'block' : 'none' }}>
+          <UserPreferences />
+        </div>
       </>
     );
   };
 
   const getPageTitle = () => {
-    const item = navigationItems.find(item => item.id === activeView);
-    return item ? item.label : 'Dashboard';
+    // Buscar primero en navigationItems
+    const navItem = navigationItems.find(item => item.id === activeView);
+    if (navItem) return navItem.label;
+    
+    // Si no está, buscar en userNavigationItems
+    const userItem = userNavigationItems.find(item => item.id === activeView);
+    if (userItem) return userItem.label;
+    
+    return 'Dashboard';
   };
 
   const handleLogout = () => {
@@ -247,9 +294,11 @@ export default function HomePage() {
   return (
     <AuthProvider>
       <SystemSettingsProvider>
-        <DynamicTitle />
-        <AppContent />
-        <Toaster />
+        <ThemeProvider>
+          <DynamicTitle />
+          <AppContent />
+          <Toaster />
+        </ThemeProvider>
       </SystemSettingsProvider>
     </AuthProvider>
   );

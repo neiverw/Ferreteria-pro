@@ -85,7 +85,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        {children}
+        <div suppressHydrationWarning>
+          {children}
+        </div>
       </body>
     </html>
   );
