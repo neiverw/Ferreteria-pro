@@ -1,0 +1,517 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ferretería Pro - API REST",
+    "version": "1.0.0",
+    "description": "Documentación interactiva de la API interna para el Sistema de Gestión e Inventario (SGI) de Ferretería Pro."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor de desarrollo local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Configuración del Sistema",
+      "description": "Variables empresariales globales"
+    },
+    {
+      "name": "Preferencias de Usuario",
+      "description": "Tema visual y accesibilidad por usuario"
+    },
+    {
+      "name": "Usuarios y Accesos",
+      "description": "Administración de cuentas, perfiles y contraseñas"
+    },
+    {
+      "name": "Proveedores y Productos",
+      "description": "Gestión de proveedores y catálogos de suministros"
+    },
+    {
+      "name": "Diagnóstico",
+      "description": "Estado y conectividad de la API"
+    }
+  ],
+  "paths": {
+    "/api/system-settings": {
+      "get": {
+        "tags": ["Configuración del Sistema"],
+        "summary": "Obtener configuración empresarial",
+        "description": "Retorna variables globales de la empresa como NIT, dirección, teléfono, correo y tasa de impuestos. Requiere sesión activa.",
+        "responses": {
+          "200": {
+            "description": "Configuración obtenida correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Configuración del Sistema"],
+        "summary": "Actualizar configuración empresarial",
+        "description": "Actualiza una o varias variables del sistema. Requiere rol de administrador.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSystemSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuración guardada exitosamente"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "No autorizado (requiere rol admin)"
+          }
+        }
+      }
+    },
+    "/api/user-preferences": {
+      "get": {
+        "tags": ["Preferencias de Usuario"],
+        "summary": "Obtener preferencias del usuario actual",
+        "description": "Retorna tema visual y tamaño de fuente asignados al perfil del usuario autenticado.",
+        "responses": {
+          "200": {
+            "description": "Preferencias obtenidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Preferencias de Usuario"],
+        "summary": "Guardar preferencias de usuario",
+        "description": "Actualiza tema (light/dark) y tamaño de fuente (small/medium/large).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserPreferencesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferencias actualizadas"
+          },
+          "401": {
+            "description": "No autenticado"
+          }
+        }
+      }
+    },
+    "/api/list-users": {
+      "get": {
+        "tags": ["Usuarios y Accesos"],
+        "summary": "Listar todos los usuarios",
+        "description": "Obtiene la lista de usuarios y roles registrados. Requiere rol admin.",
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "No autorizado (requiere admin)"
+          }
+        }
+      }
+    },
+    "/api/create-user": {
+      "post": {
+        "tags": ["Usuarios y Accesos"],
+        "summary": "Crear un nuevo usuario",
+        "description": "Crea una cuenta en Supabase Auth y su perfil correspondiente. Requiere rol admin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado con éxito"
+          },
+          "400": {
+            "description": "Datos incompletos o inválidos"
+          },
+          "403": {
+            "description": "No autorizado"
+          }
+        }
+      }
+    },
+    "/api/delete-user": {
+      "delete": {
+        "tags": ["Usuarios y Accesos"],
+        "summary": "Eliminar un usuario",
+        "description": "Elimina el usuario de Auth y la tabla profiles. No permite auto-eliminación. Requiere admin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userIdToDelete"],
+                "properties": {
+                  "userIdToDelete": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "8b51d5c2-1234-4567-89ab-cdef01234567"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario eliminado"
+          },
+          "400": {
+            "description": "No se puede auto-eliminar o ID no suministrado"
+          },
+          "403": {
+            "description": "No autorizado"
+          }
+        }
+      }
+    },
+    "/api/admin/update-password": {
+      "post": {
+        "tags": ["Usuarios y Accesos"],
+        "summary": "Actualizar contraseña de usuario",
+        "description": "Permite al administrador restablecer la contraseña de acceso de cualquier usuario.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId", "newPassword"],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "NuevaContraseña2026!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña actualizada"
+          },
+          "403": {
+            "description": "No autorizado"
+          }
+        }
+      }
+    },
+    "/api/suppliers": {
+      "get": {
+        "tags": ["Proveedores y Productos"],
+        "summary": "Listar todos los proveedores",
+        "description": "Retorna todos los proveedores registrados en la base de datos.",
+        "responses": {
+          "200": {
+            "description": "Lista de proveedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Supplier"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Proveedores y Productos"],
+        "summary": "Crear nuevo proveedor",
+        "description": "Registra un nuevo proveedor.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proveedor creado"
+          }
+        }
+      }
+    },
+    "/api/suppliers/{id}": {
+      "put": {
+        "tags": ["Proveedores y Productos"],
+        "summary": "Actualizar proveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID del proveedor"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Proveedor actualizado"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Proveedores y Productos"],
+        "summary": "Eliminar proveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID del proveedor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proveedor eliminado"
+          }
+        }
+      }
+    },
+    "/api/suppliers/{id}/products": {
+      "get": {
+        "tags": ["Proveedores y Productos"],
+        "summary": "Listar productos de un proveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID del proveedor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Productos del proveedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test": {
+      "get": {
+        "tags": ["Diagnóstico"],
+        "summary": "Health check del servidor",
+        "description": "Comprueba si la API responde correctamente.",
+        "responses": {
+          "200": {
+            "description": "Servidor funcionando",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SystemSettings": {
+        "type": "object",
+        "properties": {
+          "company_name": { "type": "string", "example": "Ferretería Pro" },
+          "company_nit": { "type": "string", "example": "900123456-7" },
+          "company_address": { "type": "string", "example": "Calle 10 # 20-30" },
+          "company_phone": { "type": "string", "example": "3128807356" },
+          "company_email": { "type": "string", "format": "email", "example": "contacto@ferreteriapro.com" },
+          "default_tax_rate": { "type": "string", "example": "19" }
+        }
+      },
+      "SystemSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "settings": { "$ref": "#/components/schemas/SystemSettings" }
+        }
+      },
+      "UpdateSystemSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "settings": { "$ref": "#/components/schemas/SystemSettings" }
+        }
+      },
+      "UserPreferencesResponse": {
+        "type": "object",
+        "properties": {
+          "preferences": {
+            "type": "object",
+            "properties": {
+              "theme": { "type": "string", "enum": ["light", "dark"], "example": "light" },
+              "fontSize": { "type": "string", "enum": ["small", "medium", "large"], "example": "medium" }
+            }
+          }
+        }
+      },
+      "UpdateUserPreferencesRequest": {
+        "type": "object",
+        "required": ["preferences"],
+        "properties": {
+          "preferences": {
+            "type": "object",
+            "properties": {
+              "theme": { "type": "string", "enum": ["light", "dark"] },
+              "fontSize": { "type": "string", "enum": ["small", "medium", "large"] }
+            }
+          }
+        }
+      },
+      "UsersListResponse": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "user_id": { "type": "string", "format": "uuid" },
+                "username": { "type": "string" },
+                "name": { "type": "string" },
+                "email": { "type": "string", "format": "email" },
+                "role": { "type": "string", "enum": ["admin", "cajero", "bodega"] }
+              }
+            }
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["email", "password", "username", "name", "role"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 6 },
+          "username": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["admin", "cajero", "bodega"] }
+        }
+      },
+      "Supplier": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string", "example": "Distribuidora Eléctrica S.A.S" },
+          "contact_name": { "type": "string", "example": "Juan Gómez" },
+          "phone": { "type": "string", "example": "3101234567" },
+          "email": { "type": "string", "format": "email", "example": "ventas@distribuidora.com" },
+          "address": { "type": "string", "example": "Av. 30 # 45-67" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SupplierInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "contact_name": { "type": "string" },
+          "phone": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "address": { "type": "string" }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "code": { "type": "string", "example": "MART-01" },
+          "name": { "type": "string", "example": "Martillo Tubular 16oz" },
+          "description": { "type": "string" },
+          "brand": { "type": "string" },
+          "stock": { "type": "number" },
+          "price": { "type": "number" },
+          "cost": { "type": "number" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

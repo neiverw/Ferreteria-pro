@@ -1,74 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase-server';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    console.log('🔍 Iniciando carga de configuraciones del sistema...');
-    
-    // Verificar variables de entorno
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Variables de entorno faltantes');
+    const supabase = await createSupabaseServerClient();
+
+    // 1. Validar que la petición provenga de un usuario autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Variables de entorno no configuradas' },
+        { error: 'No autenticado. Se requiere inicio de sesión para acceder a la configuración del sistema.' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Obtener el store_id del perfil del usuario
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('store_id')
+      .eq('user_id', user.id)
+      .single();
+
+    const storeId = profile?.store_id;
+
+    // 3. Obtener configuraciones del sistema filtradas por store_id
+    const serviceClient = createSupabaseServiceClient();
+    let query = serviceClient.from('system_settings').select('setting_key, setting_value');
+
+    if (storeId) {
+      query = query.eq('store_id', storeId);
+    } else {
+      return NextResponse.json({ settings: {} }, { status: 200 });
+    }
+
+    const { data: settingsData, error } = await query;
+
+    if (error) {
+      console.error('Error al obtener system_settings de Supabase:', error.message);
+      return NextResponse.json(
+        { error: 'Error al cargar configuración', details: error.message },
         { status: 500 }
       );
     }
 
-    // Importar dinámicamente para evitar problemas de build
-    const { createServerClient } = await import('@supabase/ssr');
-    
-    const supabase = createServerClient(
-      supabaseUrl,
-      supabaseServiceKey,
-      {
-        cookies: {
-          get() { return undefined },
-          set() {},
-          remove() {},
-        },
+    // 4. Convertir array de configuraciones a objeto clave-valor
+    const settings = (settingsData || []).reduce<Record<string, string>>((acc, setting) => {
+      if (setting.setting_key) {
+        acc[setting.setting_key] = setting.setting_value ?? '';
       }
-    );
-
-    console.log('🔗 Cliente Supabase creado correctamente');
-
-    // Obtener configuraciones desde system_settings
-    const { data: settingsData, error } = await supabase
-      .from('system_settings')
-      .select('setting_key, setting_value');
-
-    if (error) {
-      console.error('❌ Error de Supabase:', error);
-      throw error;
-    }
-
-    console.log('📊 Datos obtenidos:', settingsData);
-
-    // Convertir array de configuraciones a objeto
-    const settings = settingsData?.reduce((acc: Record<string, string>, setting: any) => {
-      acc[setting.setting_key] = setting.setting_value;
       return acc;
-    }, {} as Record<string, string>) || {};
+    }, {});
 
-    console.log('✅ Configuraciones procesadas:', settings);
+    return NextResponse.json({ settings }, { status: 200 });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    console.error('Error en GET /api/system-settings:', errorMessage);
 
-    return NextResponse.json({ settings });
-  } catch (error: any) {
-    console.error('💥 Error completo:', {
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      stack: error.stack
-    });
-    
     return NextResponse.json(
-      { 
-        error: 'Error al cargar configuración',
-        details: error.message,
-        code: error.code || 'UNKNOWN'
-      },
+      { error: 'Error interno del servidor', details: errorMessage },
       { status: 500 }
     );
   }
@@ -76,64 +68,77 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Iniciando actualización de configuraciones...');
-    
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabase = await createSupabaseServerClient();
+
+    // 1. Validar autenticación
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Variables de entorno no configuradas' },
-        { status: 500 }
+        { error: 'No autenticado. Se requiere inicio de sesión.' },
+        { status: 401 }
       );
     }
 
-    const { createServerClient } = await import('@supabase/ssr');
-    
-    const supabase = createServerClient(
-      supabaseUrl,
-      supabaseServiceKey,
-      {
-        cookies: {
-          get() { return undefined },
-          set() {},
-          remove() {},
-        },
+    // 2. Validar rol y obtener store_id
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, store_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'owner')) {
+      return NextResponse.json(
+        { error: 'No autorizado. Solo los administradores pueden modificar la configuración.' },
+        { status: 403 }
+      );
+    }
+
+    const storeId = profile.store_id || null;
+
+    // 3. Validar payload recibido
+    const body = await request.json();
+    const settings = body?.settings;
+
+    if (!settings || typeof settings !== 'object') {
+      return NextResponse.json(
+        { error: 'Payload de configuración inválido' },
+        { status: 400 }
+      );
+    }
+
+    // 4. Actualizar configuraciones vinculadas al store_id
+    const serviceClient = createSupabaseServiceClient();
+    const entries = Object.entries(settings as Record<string, unknown>);
+
+    const updates = entries.map(async ([key, value]) => {
+      const payload: Record<string, unknown> = {
+        setting_key: key,
+        setting_value: String(value ?? ''),
+        updated_at: new Date().toISOString(),
+      };
+      if (storeId) {
+        payload.store_id = storeId;
       }
-    );
 
-    const { settings } = await request.json();
-    console.log('📝 Configuraciones a actualizar:', settings);
-
-    // Actualizar cada configuración usando upsert
-    const updates = Object.entries(settings).map(async ([key, value]) => {
-      const { error } = await supabase
+      const { error } = await serviceClient
         .from('system_settings')
-        .upsert(
-          {
-            setting_key: key,
-            setting_value: value as string,
-            updated_at: new Date().toISOString()
-          },
-          { onConflict: 'setting_key' }
-        );
+        .upsert(payload);
 
       if (error) {
-        console.error(`❌ Error updating ${key}:`, error);
         throw error;
       }
-
-      return { key, success: true };
     });
 
     await Promise.all(updates);
-    console.log('✅ Configuraciones actualizadas exitosamente');
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('💥 Error actualizando configuraciones:', error);
+    return NextResponse.json({ success: true, message: 'Configuración actualizada exitosamente' }, { status: 200 });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    console.error('Error en POST /api/system-settings:', errorMessage);
+
     return NextResponse.json(
-      { error: 'Error al guardar configuración', details: error.message },
+      { error: 'Error al guardar configuración', details: errorMessage },
       { status: 500 }
     );
   }

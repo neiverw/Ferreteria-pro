@@ -1,25 +1,50 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
-// Cliente de Supabase (solo en servidor)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // ⚠️ Service Role Key SOLO en el servidor
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-
-// GET: listar proveedores
+// GET: listar proveedores por ferretería
 export async function GET() {
-  const { data, error } = await supabase.from('suppliers').select('*').order('created_at', { ascending: false });
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('store_id')
+    .eq('user_id', user.id)
+    .single();
+
+  let query = supabase.from('suppliers').select('*').order('created_at', { ascending: false });
+
+  if (profile?.store_id) {
+    query = query.eq('store_id', profile.store_id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json(data, { status: 200 });
+  return NextResponse.json(data || [], { status: 200 });
 }
 
 // POST: crear proveedor
 export async function POST(req: Request) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('store_id')
+    .eq('user_id', user.id)
+    .single();
+
   const body = await req.json();
   const { name, contact_name, phone, email, address } = body;
 
@@ -27,9 +52,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
   }
 
+  const payload: Record<string, unknown> = { name, contact_name, phone, email, address };
+  if (profile?.store_id) {
+    payload.store_id = profile.store_id;
+  }
+
   const { data, error } = await supabase
     .from('suppliers')
-    .insert([{ name, contact_name, phone, email, address }])
+    .insert([payload])
     .select()
     .single();
 
@@ -41,6 +71,7 @@ export async function POST(req: Request) {
 
 // PUT: actualizar proveedor
 export async function PUT(req: Request) {
+  const supabase = await createSupabaseServerClient();
   const body = await req.json();
   const { id, ...updates } = body;
 
@@ -63,6 +94,7 @@ export async function PUT(req: Request) {
 
 // DELETE: eliminar proveedor
 export async function DELETE(req: Request) {
+  const supabase = await createSupabaseServerClient();
   const { id } = await req.json();
 
   if (!id) {

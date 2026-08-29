@@ -9,7 +9,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'ID de usuario no proporcionado.' }, { status: 400 });
   }
 
-  const cookieStore = await cookies(); // <-- await
+  const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,11 +33,11 @@ export async function DELETE(request: Request) {
 
   const { data: adminProfile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, store_id')
     .eq('user_id', adminUser.id)
     .single();
 
-  if (adminProfile?.role !== 'admin') {
+  if (adminProfile?.role !== 'admin' && adminProfile?.role !== 'owner') {
     return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
   }
 
@@ -51,6 +51,21 @@ export async function DELETE(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
+  // Verificar que el usuario a eliminar pertenezca a la misma ferretería
+  if (adminProfile.store_id) {
+    const { data: targetProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('store_id')
+      .eq('user_id', userIdToDelete)
+      .single();
+
+    if (targetProfile && targetProfile.store_id !== adminProfile.store_id) {
+      return NextResponse.json({ error: 'No tienes permiso para eliminar usuarios de otra ferretería.' }, { status: 403 });
+    }
+  }
+
+  // Eliminar de auth y profiles
+  await supabaseAdmin.from('profiles').delete().eq('user_id', userIdToDelete);
   const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userIdToDelete);
   if (deleteError) {
     return NextResponse.json({ error: `Error al eliminar: ${deleteError.message}` }, { status: 500 });

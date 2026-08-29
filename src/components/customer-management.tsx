@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Separator } from './ui/separator';
 import { getColombiaTodayISO } from '@/lib/date-utils';
+import { useAuth } from './auth-context';
 import { 
   Users, 
   Search, 
@@ -47,28 +48,25 @@ export interface CustomerInvoice {
   id: string;
   invoiceNumber: string;
   customerId: string;
-  customerName?: string; // <-- AÑADIR ESTA LÍNEA
+  customerName?: string;
   date: string;
   total: number;
   status: 'paid' | 'pending' | 'cancelled';
-  items: any[]; // O una interfaz más específica si la tienes
+  items: any[];
 }
 
-// --- SE ELIMINAN mockCustomers y mockCustomerInvoices ---
-
 export function CustomerManagement() {
-  // --- CORRECCIÓN: Envolver la creación del cliente en useMemo ---
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-
+  const { user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerInvoices, setCustomerInvoices] = useState<CustomerInvoice[]>([]);
-  const [loading, setLoading] = useState(true); // Estado para la carga inicial
+  const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState<{
     name: string;
-    document: number | null; // Permitir null para el estado inicial
+    document: number | null;
     document_type: 'CC' | 'NIT' | 'CE' | 'PASSPORT';
     phone: string;
     email: string;
@@ -80,7 +78,7 @@ export function CustomerManagement() {
   }>(
     {
       name: '',
-      document: null, // Inicializar como null
+      document: null,
       document_type: 'CC',
       phone: '',
       email: '',
@@ -94,21 +92,24 @@ export function CustomerManagement() {
   const [showEditCustomer, setShowEditCustomer] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Omit<Customer, 'document'> & { document: number | null } | null>(null);
 
-  // Cargar clientes y facturas desde Supabase al inicializar
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
-      // 1. Obtener clientes
-      const { data: customersData, error: customersError } = await supabase
+      let custQuery = supabase
         .from('customers')
         .select('*')
         .order('name');
+
+      if (user?.storeId) {
+        custQuery = custQuery.eq('store_id', user.storeId);
+      }
+
+      const { data: customersData, error: customersError } = await custQuery;
       
       if (customersError) {
         console.error('Error fetching customers:', customersError);
       } else if (customersData) {
-        // Mapear snake_case de la DB a camelCase de la UI
         const formattedCustomers = customersData.map(c => ({
           ...c,
           registrationDate: c.registration_date,
@@ -119,10 +120,15 @@ export function CustomerManagement() {
         setCustomers(formattedCustomers);
       }
 
-      // 2. Obtener facturas (opcional, pero recomendado)
-      const { data: invoicesData, error: invoicesError } = await supabase
+      let invQuery = supabase
         .from('invoices')
-        .select('*, items:invoice_items(*)'); // Asume que tienes una tabla 'invoice_items'
+        .select('*, items:invoice_items(*)');
+
+      if (user?.storeId) {
+        invQuery = invQuery.eq('store_id', user.storeId);
+      }
+
+      const { data: invoicesData, error: invoicesError } = await invQuery;
 
       if (invoicesError) {
         console.error('Error fetching invoices:', invoicesError);
@@ -131,7 +137,7 @@ export function CustomerManagement() {
           ...inv,
           customerId: inv.customer_id,
           invoiceNumber: inv.invoice_number,
-          date: inv.invoice_date, // <-- Usa el campo correcto
+          date: inv.invoice_date,
           items: inv.items.map((item: any) => ({
             ...item,
             productName: item.product_name,
@@ -145,11 +151,26 @@ export function CustomerManagement() {
     };
 
     fetchData();
-  }, [supabase]); // Añadir supabase a las dependencias
+
+    // Suscripción en Tiempo Real
+    const channel = supabase
+      .channel('realtime_customer_management')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user?.storeId]);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.document.toString().includes(searchTerm) || // Convertir a string para buscar
+    customer.document.toString().includes(searchTerm) ||
     (customer.email ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -171,9 +192,9 @@ export function CustomerManagement() {
   const handleAddCustomer = async () => {
     if (!newCustomer.name || newCustomer.document === null) return; // Validar que no sea null
 
-    const newCustomerData = {
+    const newCustomerData: Record<string, unknown> = {
       name: newCustomer.name,
-      document: newCustomer.document, // Ya es un número
+      document: newCustomer.document,
       document_type: newCustomer.document_type,
       phone: newCustomer.phone || null,
       email: newCustomer.email || null,
@@ -184,6 +205,10 @@ export function CustomerManagement() {
       is_active: true,
       notes: newCustomer.notes || null
     };
+
+    if (user?.storeId) {
+      newCustomerData.store_id = user.storeId;
+    }
 
     const { data, error } = await supabase
       .from('customers')
@@ -766,7 +791,7 @@ export function CustomerManagement() {
                                               </CardHeader>
                                               <CardContent>
                                                 <div className="space-y-2">
-                                                  {invoice.items.map((item, index) => (
+                                                  {invoice.items.map((item: { productName: string; quantity: number; total: number }, index: number) => (
                                                     <div key={index} className="flex items-center justify-between text-sm">
                                                       <div>
                                                         <span className="font-medium">{item.productName}</span>

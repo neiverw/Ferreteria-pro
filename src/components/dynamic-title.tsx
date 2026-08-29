@@ -2,17 +2,19 @@
 
 import { useEffect } from 'react';
 import { useSystemSettings } from '@/components/system-settings-context';
+import { useAuth } from '@/components/auth-context';
 
 export function DynamicTitle() {
+  const { isAuthenticated } = useAuth();
   const { settings } = useSystemSettings();
 
   useEffect(() => {
-    if (settings?.companyName) {
+    if (isAuthenticated && settings?.companyName) {
       document.title = `${settings.companyName} - SGI`;
     } else {
-      document.title = 'Cargando...';
+      document.title = 'Ferretería Pro - SGI';
     }
-  }, [settings?.companyName]);
+  }, [isAuthenticated, settings?.companyName]);
 
   return null;
 }

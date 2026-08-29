@@ -15,6 +15,7 @@ import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
 import { Customer, CustomerInvoice } from './customer-management';
 import { useSystemSettings } from '@/components/system-settings-context';
+import { useAuth } from './auth-context';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Textarea } from './ui/textarea';
@@ -48,8 +49,8 @@ interface CurrentInvoice {
 // Funciones de traducción
 const translateStatus = (status: string): string => {
   const translations: Record<string, string> = {
-    'pending': 'Pendiente',
     'paid': 'Pagada',
+    'pending': 'Pendiente',
     'cancelled': 'Cancelada',
     'overdue': 'Vencida'
   };
@@ -77,6 +78,7 @@ interface ExtendedCustomerInvoice extends CustomerInvoice {
 
 export function BillingSystem() {
   const { settings: systemSettings } = useSystemSettings();
+  const { user } = useAuth();
   // --- CORRECCIÓN: Envolver la creación del cliente en useMemo ---
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,7 +103,7 @@ export function BillingSystem() {
     tax_amount: 0,
     discount: 0,
     total: 0,
-    status: 'pending',
+    status: 'paid',
     payment_method: 'cash'
   });
 
@@ -109,9 +111,14 @@ export function BillingSystem() {
   const [quantity, setQuantity] = useState(1);
   const [isCustomerComboboxOpen, setIsCustomerComboboxOpen] = useState(false);
   const [isProductComboboxOpen, setIsProductComboboxOpen] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [viewInvoice, setViewInvoice] = useState<ExtendedCustomerInvoice | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // 1. Primero, agregar el hook para obtener el usuario
-  const [user, setUser] = useState<any>(null);
+  const [userState, setUserState] = useState<any>(null);
 
   // Agregar estos estados
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -129,7 +136,7 @@ export function BillingSystem() {
     try {
       // Sin búsqueda, cargar normalmente
       if (!searchTerm.trim()) {
-        const { data: invoicesData, error } = await supabase
+        let invQuery = supabase
           .from('invoices')
           .select(`
             id,
@@ -145,6 +152,12 @@ export function BillingSystem() {
           `)
           .order('created_at', { ascending: false })
           .limit(20);
+
+        if (user?.storeId) {
+          invQuery = invQuery.eq('store_id', user.storeId);
+        }
+
+        const { data: invoicesData, error } = await invQuery;
 
         if (error) throw error;
 
@@ -343,9 +356,18 @@ export function BillingSystem() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+
+      let prodQuery = supabase.from('products').select('*').order('name');
+      let custQuery = supabase.from('customers').select('*').order('name');
+
+      if (user?.storeId) {
+        prodQuery = prodQuery.eq('store_id', user.storeId);
+        custQuery = custQuery.eq('store_id', user.storeId);
+      }
+
       const [productsRes, customersRes] = await Promise.all([
-        supabase.from('products').select('*').order('name'),
-        supabase.from('customers').select('*').order('name')
+        prodQuery,
+        custQuery
       ]);
 
       if (productsRes.data) setProducts(productsRes.data.map(p => ({ ...p, minStock: p.min_stock })));
@@ -356,17 +378,33 @@ export function BillingSystem() {
 
       setLoading(false);
     };
-    fetchData();
-  }, [supabase]); // Añadir supabase a las dependencias
 
-  // 2. Agregar useEffect para obtener el usuario actual
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+    fetchData();
+
+    // Suscripción en Tiempo Real
+    const channel = supabase
+      .channel('realtime_billing_system')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
+        let prodQuery = supabase.from('products').select('*').order('name');
+        if (user?.storeId) prodQuery = prodQuery.eq('store_id', user.storeId);
+        const { data } = await prodQuery;
+        if (data) setProducts(data.map(p => ({ ...p, minStock: p.min_stock })));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, async () => {
+        let custQuery = supabase.from('customers').select('*').order('name');
+        if (user?.storeId) custQuery = custQuery.eq('store_id', user.storeId);
+        const { data } = await custQuery;
+        if (data) setCustomers(data.map(c => ({ ...c, registrationDate: c.registration_date, totalPurchases: c.total_purchases, totalSpent: c.total_spent, lastPurchase: c.last_purchase })));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => {
+        loadInvoices(invoiceSearchTerm);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    getUser();
-  }, [supabase]);
+  }, [supabase, user?.storeId, invoiceSearchTerm]);
 
   // Efecto para buscar facturas cuando cambie el término de búsqueda
   useEffect(() => {
@@ -485,17 +523,21 @@ export function BillingSystem() {
     }
   };
 
-  // 1. Función para generar número de factura
+  // 1. Función para generar número de factura por ferretería
   const generateInvoiceNumber = async () => {
-    // Obtener la última factura ordenada por número
-    const { data: lastInvoice, error } = await supabase
+    let lastInvQuery = supabase
       .from('invoices')
       .select('invoice_number')
       .order('invoice_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 es el código cuando no hay resultados
+    if (user?.storeId) {
+      lastInvQuery = lastInvQuery.eq('store_id', user.storeId);
+    }
+
+    const { data: lastInvoice, error } = await lastInvQuery.single();
+
+    if (error && error.code !== 'PGRST116') {
       console.error('Error al obtener último número de factura:', error);
       throw error;
     }
@@ -503,15 +545,16 @@ export function BillingSystem() {
     let nextNumber = 1;
 
     if (lastInvoice?.invoice_number) {
-      // Extraer el número de la última factura (asumiendo formato FAC-XXXXXX)
       const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[1], 10);
-      nextNumber = lastNumber + 1;
+      if (!isNaN(lastNumber)) {
+        nextNumber = lastNumber + 1;
+      }
     }
 
     return `FAC-${String(nextNumber).padStart(6, '0')}`;
   };
 
-  // 2. Actualizar la función generateInvoice
+  // 2. Función generateInvoice conectada al endpoint transaccional del servidor
   const generateInvoice = async () => {
     if (!currentInvoice.customer_id || currentInvoice.items.length === 0) {
       toast.error('Por favor, selecciona un cliente y agrega al menos un producto.');
@@ -524,121 +567,37 @@ export function BillingSystem() {
     }
 
     try {
-      // Generar número de factura
-      const invoice_number = await generateInvoiceNumber();
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          customerId: currentInvoice.customer_id,
+          items: currentInvoice.items,
+          subtotal: currentInvoice.subtotal,
+          taxRate: currentInvoice.tax_rate,
+          taxAmount: currentInvoice.tax_amount,
+          discount: currentInvoice.discount || 0,
+          total: currentInvoice.total,
+          status: currentInvoice.status,
+          paymentMethod: currentInvoice.payment_method,
+          notes: currentInvoice.notes || ''
+        })
+      });
 
-      const invoiceData = {
-        invoice_number,
-        customer_id: currentInvoice.customer_id,
-        user_id: user.id,
-        invoice_date: getColombiaTodayISO(),
-        due_date: getColombiaTodayISO(),
-        subtotal: currentInvoice.subtotal,
-        tax_rate: currentInvoice.tax_rate,
-        tax_amount: currentInvoice.tax_amount,
-        discount: currentInvoice.discount || 0,
-        total: currentInvoice.total,
-        status: currentInvoice.status,
-        payment_method: currentInvoice.payment_method,
-        notes: currentInvoice.notes || ''
-      };
+      const result = await response.json();
 
-      console.log('📝 Datos de factura a insertar:', invoiceData);
-
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert([invoiceData])
-        .select()
-        .single();
-
-      if (invoiceError) {
-        console.error('Error al insertar factura:', invoiceError);
-        throw invoiceError;
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al generar la factura.');
       }
 
-      console.log('✅ Factura creada:', invoice);
+      const generatedNum = result.invoice_number || 'emitida';
+      toast.success(`¡Factura ${generatedNum} generada exitosamente!`);
 
-      // SOLUCIÓN: Usar función RPC para insertar items
-      for (let i = 0; i < currentInvoice.items.length; i++) {
-        const item = currentInvoice.items[i];
-        
-        console.log(`📝 Insertando item ${i + 1} usando RPC:`, {
-          p_invoice_id: invoice.id,
-          p_product_id: item.product.id,
-          p_product_name: item.product.name,
-          p_product_code: item.product.code || null,
-          p_quantity: Number(item.quantity),
-          p_unit_price: Number(item.unit_price),
-          p_discount: Number(item.discount || 0)
-        });
-
-        const { data: itemId, error: itemError } = await supabase
-          .rpc('insert_invoice_item_safe', {
-            p_invoice_id: invoice.id,
-            p_product_id: item.product.id,
-            p_product_name: item.product.name,
-            p_product_code: item.product.code || null,
-            p_quantity: Number(item.quantity),
-            p_unit_price: Number(item.unit_price),
-            p_discount: Number(item.discount || 0)
-          });
-
-        if (itemError) {
-          console.error(`Error al insertar item ${i + 1} con RPC:`, itemError);
-          throw itemError;
-        }
-
-        console.log(`✅ Item ${i + 1} insertado con ID:`, itemId);
-      }
-
-      console.log('✅ Todos los items insertados correctamente con RPC');
-
-      // 3. Actualizar stock de productos
-      for (const item of currentInvoice.items) {
-        const newStock = Number(item.product.stock) - Number(item.quantity);
-        
-        const { error: stockError } = await supabase
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', item.product.id);
-
-        if (stockError) {
-          console.error(`Error actualizando stock del producto ${item.product.id}:`, stockError);
-          throw stockError;
-        }
-      }
-
-      console.log('✅ Stock actualizado');
-
-      // 4. Registrar movimientos de stock (opcional y simplificado)
-      try {
-        for (const item of currentInvoice.items) {
-          const movementData = {
-            product_id: item.product.id,
-            movement_type: 'exit',
-            quantity: Number(item.quantity),
-            previous_stock: Number(item.product.stock),
-            new_stock: Number(item.product.stock) - Number(item.quantity),
-            reference_type: 'invoice',
-            reference_id: invoice.id,
-            user_id: user.id,
-            notes: `Venta en factura ${invoice_number}`
-          };
-
-          await supabase
-            .from('stock_movements')
-            .insert(movementData);
-        }
-      } catch (stockMovementError) {
-        console.warn('No se pudieron registrar algunos movimientos de stock:', stockMovementError);
-      }
-
-      // 5. Recargar facturas
+      // 1. Recargar facturas
       await loadInvoices();
 
-      toast.success(`Factura ${invoice_number} generada exitosamente!`);
-      
-      // 6. Limpiar formulario
+      // 2. Limpiar formulario
       setCurrentInvoice({
         customer_id: null,
         customerName: '',
@@ -649,27 +608,27 @@ export function BillingSystem() {
         tax_amount: 0,
         discount: 0,
         total: 0,
-        status: 'pending',
+        status: 'paid',
         payment_method: 'cash'
       });
 
-      // Limpiar selecciones
       setSelectedProductId('');
       setQuantity(1);
 
-      // Recargar productos para actualizar el stock en la UI
-      const { data: updatedProducts } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
-    
+      // 3. Recargar productos filtrados por tienda
+      let prodQuery = supabase.from('products').select('*').order('name');
+      if (user?.storeId) {
+        prodQuery = prodQuery.eq('store_id', user.storeId);
+      }
+      const { data: updatedProducts } = await prodQuery;
+
       if (updatedProducts) {
         setProducts(updatedProducts.map(p => ({ ...p, minStock: p.min_stock })));
       }
 
     } catch (error: any) {
-      console.error('💥 Error completo al generar la factura:', error);
-      toast.error(`Error al generar la factura: ${error.message || 'Error desconocido'}`);
+      console.error('💥 Error al generar la factura:', error);
+      toast.error(error.message || 'Error desconocido al generar la factura.');
     }
   };
 

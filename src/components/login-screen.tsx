@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Wrench, Eye, EyeOff, AlertCircle, Crown, CreditCard, Package } from 'lucide-react';
 import { useAuth } from './auth-context';
-import { useSystemSettings } from './system-settings-context';
 
 export function LoginScreen() {
   const [username, setUsername] = useState('');
@@ -16,7 +15,6 @@ export function LoginScreen() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-  const { settings: systemSettings } = useSystemSettings();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,19 +22,16 @@ export function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // La función login ahora es asíncrona y se espera
       await login(username, password);
-      // Si el login es exitoso, el AuthProvider se encargará de redirigir
-    } catch (err: any) {
-      // Si hay un error, lo mostramos al usuario
-      setError(err.message || 'Usuario o contraseña incorrectos.');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Usuario o contraseña incorrectos.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Obtener el nombre de la empresa de las configuraciones
-  const companyName = systemSettings?.companyName || 'Sistema de Gestión';
+  const companyName = 'Ferretería Pro';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-3 sm:p-4">

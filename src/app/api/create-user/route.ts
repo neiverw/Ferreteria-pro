@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Faltan campos requeridos (email, password, role, username, name).' }, { status: 400 });
   }
 
-  const cookieStore = await cookies(); // <-- await
+  const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const { data: adminProfile, error: profileFetchError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, store_id')
     .eq('user_id', adminUser.id)
     .single();
 
@@ -42,8 +42,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No se pudo verificar el rol.' }, { status: 500 });
   }
 
-  if (adminProfile?.role !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
+  if (adminProfile?.role !== 'admin' && adminProfile?.role !== 'owner') {
+    return NextResponse.json({ error: 'No autorizado. Solo los administradores pueden crear usuarios.' }, { status: 403 });
   }
 
   const supabaseAdmin = createClient(
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { username, name, role }
+    user_metadata: { username, name, role, storeId: adminProfile.store_id }
   });
 
   if (createError) {
@@ -67,15 +67,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No se pudo crear el usuario.' }, { status: 500 });
   }
 
+  const profilePayload: Record<string, unknown> = {
+    user_id: newUser.user.id,
+    email,
+    username,
+    name,
+    role,
+  };
+  if (adminProfile.store_id) {
+    profilePayload.store_id = adminProfile.store_id;
+  }
+
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .insert({
-      user_id: newUser.user.id,
-      email,
-      username,
-      name,
-      role
-    });
+    .insert(profilePayload);
 
   if (profileError) {
     await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);

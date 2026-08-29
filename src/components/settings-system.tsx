@@ -22,13 +22,13 @@ interface UserFormData {
   name: string;
   email: string;
   password: string;
-  role: 'cajero' | 'bodega' | 'admin';
+  role: 'cajero' | 'bodega' | 'admin' | 'owner';
 }
 interface EditUserFormData {
   username: string;
   name: string;
   email: string;
-  role: 'cajero' | 'bodega' | 'admin';
+  role: 'cajero' | 'bodega' | 'admin' | 'owner';
   password?: string;
 }
 interface CompanySettings {
@@ -46,7 +46,7 @@ interface SupabaseProfile {
   username: string;
   name: string;
   email: string;
-  role: 'cajero' | 'bodega' | 'admin';
+  role: 'cajero' | 'bodega' | 'admin' | 'owner';
 }
 
 export function SettingsSystem() {
@@ -61,8 +61,8 @@ export function SettingsSystem() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('users'); // <--- AÑADIR ESTADO PARA LA PESTAÑA ACTIVA
   // --- ESTA ES LA CORRECCIÓN ---
-  // Actualiza el tipo del estado para que 'role' pueda ser 'admin'.
-  const [newUserData, setNewUserData] = useState({ username: '', name: '', email: '', password: '', role: 'cajero' as 'cajero' | 'bodega' | 'admin' });
+  // Actualiza el tipo del estado para que 'role' pueda ser 'admin' u 'owner'.
+  const [newUserData, setNewUserData] = useState({ username: '', name: '', email: '', password: '', role: 'cajero' as 'cajero' | 'bodega' | 'admin' | 'owner' });
   const [editUserData, setEditUserData] = useState<EditUserFormData>({
     username: '', name: '', email: '', role: 'cajero', password: ''
   });
@@ -98,106 +98,75 @@ export function SettingsSystem() {
         setAllUsers(users);
       }
 
-      // --- AÑADIR PETICIÓN PARA CONFIGURACIÓN DE EMPRESA ---
-      // Cambiado para leer desde la tabla 'system_settings' con formato clave-valor
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('system_settings')
-        .select('setting_key, setting_value');
-      
-      if (settingsError) {
-        toast.error('Error al cargar la configuración del sistema.', { description: settingsError.message });
-      } else if (settingsData) {
-        // Transforma el array de clave-valor en un objeto
-        const settings = settingsData.reduce((acc, setting) => {
-          acc[setting.setting_key] = setting.setting_value;
-          return acc;
-        }, {} as Record<string, string>);
-
-        setCompanySettings({
-          companyName: settings.company_name || '',
-          companyNit: settings.company_nit || '',
-          companyAddress: settings.company_address || '',
-          companyPhone: settings.company_phone || '',
-          companyEmail: settings.company_email || '',
-          defaultTaxRate: parseFloat(settings.default_tax_rate) || 16.0,
-        });
+      // --- PETICIÓN PARA CONFIGURACIÓN DE EMPRESA FILTRADA POR TIENDA ---
+      try {
+        const settingsRes = await fetch('/api/system-settings', { credentials: 'include' });
+        if (settingsRes.ok) {
+          const settingsJson = await settingsRes.json();
+          const settings = settingsJson.settings || {};
+          setCompanySettings({
+            companyName: settings.company_name || '',
+            companyNit: settings.company_nit || '',
+            companyAddress: settings.company_address || '',
+            companyPhone: settings.company_phone || '',
+            companyEmail: settings.company_email || '',
+            defaultTaxRate: parseFloat(settings.default_tax_rate) || 16.0,
+          });
+        }
+      } catch (err: unknown) {
+        console.error('Error al cargar configuración:', err);
       }
 
       setLoading(false);
     };
 
     fetchAllData();
-  }, [supabase]); // Añadir supabase a las dependencias
 
-  // --- AÑADIR FUNCIÓN PARA GUARDAR LA CONFIGURACIÓN DE LA EMPRESA ---
+    // Suscripción en Tiempo Real
+    const channel = supabase
+      .channel('realtime_settings_system')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_settings' }, () => {
+        fetchAllData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  // --- GUARDAR LA CONFIGURACIÓN DE LA EMPRESA VÍA API ---
   const handleSaveCompanySettings = async () => {
-    if (user?.role !== 'admin') {
+    if (user?.role !== 'admin' && user?.role !== 'owner') {
       toast.error('No tienes permiso para realizar esta acción.');
       return;
     }
 
     try {
-      // Array de configuraciones a guardar
-      const settingsToSave = [
-        { key: 'company_name', value: companySettings.companyName },
-        { key: 'default_tax_rate', value: companySettings.defaultTaxRate.toString() },
-        { key: 'company_nit', value: companySettings.companyNit },
-        { key: 'company_address', value: companySettings.companyAddress },
-        { key: 'company_phone', value: companySettings.companyPhone },
-        { key: 'company_email', value: companySettings.companyEmail }
-      ];
-
-      // Usar upsert para insertar o actualizar cada configuración
-      const updatePromises = settingsToSave.map(async (setting) => {
-        const { data, error } = await supabase
-          .from('system_settings')
-          .upsert(
-            {
-              setting_key: setting.key,
-              setting_value: setting.value,
-              description: `Configuración de ${setting.key.replace('_', ' ')}`,
-              data_type: setting.key === 'default_tax_rate' ? 'number' : 'string',
-              is_editable: true,
-              updated_at: new Date().toISOString()
-            },
-            {
-              onConflict: 'setting_key'
-            }
-          );
-
-        if (error) {
-          console.error(`Error updating ${setting.key}:`, error);
-          throw error;
-        }
-        return { key: setting.key, success: true, data };
+      const response = await fetch('/api/system-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          settings: {
+            company_name: companySettings.companyName,
+            company_nit: companySettings.companyNit,
+            company_address: companySettings.companyAddress,
+            company_phone: companySettings.companyPhone,
+            companyEmail: companySettings.companyEmail,
+            default_tax_rate: companySettings.defaultTaxRate.toString(),
+          },
+        }),
       });
 
-      // Ejecutar todas las promesas
-      await Promise.all(updatePromises);
-
-      toast.success('Configuración de la empresa guardada exitosamente.');
-      
-      // Recargar los datos para reflejar los cambios
-      const { data: updatedSettings } = await supabase
-        .from('system_settings')
-        .select('setting_key, setting_value');
-      
-      if (updatedSettings) {
-        const settings = updatedSettings.reduce((acc, setting) => {
-          acc[setting.setting_key] = setting.setting_value;
-          return acc;
-        }, {} as Record<string, string>);
-
-        setCompanySettings({
-          companyName: settings.company_name || '',
-          companyNit: settings.company_nit || '',
-          companyAddress: settings.company_address || '',
-          companyPhone: settings.company_phone || '',
-          companyEmail: settings.company_email || '',
-          defaultTaxRate: parseFloat(settings.default_tax_rate) || 16.0,
-        });
+      if (!response.ok) {
+        throw new Error('Error al guardar la configuración');
       }
 
+      toast.success('Configuración de la empresa guardada exitosamente.');
     } catch (error: any) {
       console.error('Error al guardar configuración:', error);
       toast.error('Error al guardar la configuración.', { 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase';
+import { useAuth } from './auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -18,6 +19,7 @@ type ProductCat = {
 
 export function DashboardOverview() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const { user } = useAuth();
   const [ventasMes, setVentasMes] = useState(0);
   const [productosVendidos, setProductosVendidos] = useState(0);
   const [clientesActivos, setClientesActivos] = useState(0);
@@ -27,118 +29,172 @@ export function DashboardOverview() {
   const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number }[]>([]);
   const [lowStockAlerts, setLowStockAlerts] = useState<{ product: string; current: number; minimum: number; severity: string }[]>([]);
 
-
-  
   useEffect(() => {
     const fetchMetrics = async () => {
-      // Ventas del mes
-      const { data: invoices, error: invoicesError } = await supabase
+      // 1. Obtener facturas activas filtradas por tienda
+      let invoicesQuery = supabase
         .from('invoices')
-        .select('id, total')
-        .eq('status', 'paid')
-        .gte('invoice_date', getColombiaFirstDayOfMonth());
-      if (invoices) {
-        const totalVentas = invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
-        setVentasMes(totalVentas);
-        setTicketPromedio(invoices.length ? totalVentas / invoices.length : 0);
+        .select('id, total, status, invoice_date')
+        .neq('status', 'cancelled');
+
+      if (user?.storeId) {
+        invoicesQuery = invoicesQuery.eq('store_id', user.storeId);
       }
 
-      // Productos vendidos del mes
+      const { data: invoices } = await invoicesQuery;
+      const allStoreInvoices = invoices || [];
+      const invoiceIds = new Set(allStoreInvoices.map(inv => inv.id));
+
+      // Ventas del mes actual
+      const currentMonthPrefix = getColombiaFirstDayOfMonth().slice(0, 7);
+      const monthInvoices = allStoreInvoices.filter(inv => {
+        const d = inv.invoice_date || '';
+        return d.startsWith(currentMonthPrefix) || d >= getColombiaFirstDayOfMonth();
+      });
+
+      const totalVentas = monthInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+      setVentasMes(totalVentas);
+      setTicketPromedio(monthInvoices.length ? totalVentas / monthInvoices.length : 0);
+
+      // 2. Productos vendidos del mes
       const { data: items, error: itemsError } = await supabase
         .from('invoice_items')
-        .select('quantity, invoice_id');
-      if (items && invoices) {
-        const vendidos = items.filter((item: { invoice_id: string }) =>
-          invoices.some((inv: { id: string }) => inv.id === item.invoice_id)
-        );
-        setProductosVendidos(vendidos.reduce((sum: number, item: { quantity: number }) => sum + Number(item.quantity), 0));
+        .select('*');
+
+      if (itemsError) {
+        console.error('Error cargando invoice_items en dashboard:', itemsError);
       }
 
-      // Clientes activos
-      const { data: customers, error: customersError } = await supabase
+      const storeItems = (items || []).filter(item => item.invoice_id && invoiceIds.has(item.invoice_id));
+      const monthInvoiceIds = new Set(monthInvoices.map(inv => inv.id));
+      const monthItems = storeItems.filter(item => item.invoice_id && monthInvoiceIds.has(item.invoice_id));
+
+      setProductosVendidos(
+        monthItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+      );
+
+      // 3. Clientes activos filtrados por tienda
+      let customersQuery = supabase
         .from('customers')
         .select('id')
         .eq('is_active', true);
-      if (customers) {
-        setClientesActivos(customers.length);
+
+      if (user?.storeId) {
+        customersQuery = customersQuery.eq('store_id', user.storeId);
       }
 
-      // Tendencia de ventas por mes
-      const { data: monthlyInvoices } = await supabase
-        .from('invoices')
-        .select('total, invoice_date')
-        .eq('status', 'paid');
-      if (monthlyInvoices) {
-        const grouped = monthlyInvoices.reduce((acc: Record<string, number>, inv: { invoice_date?: string, total: number }) => {
-          const month = inv.invoice_date?.slice(0, 7) ?? '';
-          acc[month] = (acc[month] || 0) + Number(inv.total);
+      const { data: customers } = await customersQuery;
+      setClientesActivos(customers?.length || 0);
+
+      // 4. Tendencia de ventas por mes filtrada por tienda
+      if (allStoreInvoices.length > 0) {
+        const grouped = allStoreInvoices.reduce((acc: Record<string, number>, inv) => {
+          const month = inv.invoice_date ? inv.invoice_date.slice(0, 7) : currentMonthPrefix;
+          acc[month] = (acc[month] || 0) + Number(inv.total || 0);
           return acc;
         }, {});
+
         setSalesData(
           Object.entries(grouped).map(([month, sales]) => ({ month, sales }))
         );
+      } else {
+        setSalesData([]);
       }
 
-      // Ventas por categoría y top productos vendidos
-      const { data: itemsCat, error: itemsCatError } = await supabase
-        .from('invoice_items')
-        .select('product_id, quantity');
-      const { data: productsCat } = await supabase
+      // 5. Productos y categorías filtrados por tienda
+      let prodQuery = supabase
         .from('products')
         .select('id, category_id, name, price, stock, min_stock');
-      const { data: categories } = await supabase
+
+      let catQuery = supabase
         .from('categories')
         .select('id, name, color');
-      if (itemsCat && productsCat && categories) {
-        // Ventas por categoría
-        const catSales: Record<string, number> = {};
-        itemsCat.forEach((item: { product_id: string, quantity: number }) => {
-          const prod = productsCat.find((p: ProductCat) => p.id === item.product_id);
-          if (prod) {
-            catSales[prod.category_id] = (catSales[prod.category_id] || 0) + Number(item.quantity);
-          }
-        });
-        setCategoryData(
-          categories.map((cat: { id: string, name: string, color: string | null }) => ({
-            name: cat.name,
-            value: catSales[cat.id] || 0,
-            color: cat.color || '#cccccc' // Usar el color de la DB o un gris por defecto
-          }))
-        );
 
-        // Top productos vendidos
-        const prodSales: Record<string, { name: string; sales: number; revenue: number }> = {};
-        itemsCat.forEach((item: { product_id: string, quantity: number }) => {
-          const prod = productsCat.find((p: ProductCat) => p.id === item.product_id);
-          if (prod) {
-            if (!prodSales[prod.id]) {
-              prodSales[prod.id] = { name: prod.name, sales: 0, revenue: 0 };
-            }
-            prodSales[prod.id].sales += Number(item.quantity);
-            prodSales[prod.id].revenue += Number(item.quantity) * Number(prod.price);
-          }
-        });
-        setTopProducts(
-          Object.values(prodSales)
-            .sort((a, b) => b.sales - a.sales)
-            .slice(0, 5)
-        );
-
-        // Alertas de stock bajo
-        setLowStockAlerts(
-          productsCat
-            .filter((p: ProductCat) => Number(p.stock) <= Number(p.min_stock))
-            .map((p: ProductCat) => ({
-              product: p.name,
-              current: Number(p.stock),
-              minimum: Number(p.min_stock),
-              severity: Number(p.stock) === 0 ? 'high' : 'medium'
-            }))
-        );
+      if (user?.storeId) {
+        prodQuery = prodQuery.eq('store_id', user.storeId);
+        catQuery = catQuery.eq('store_id', user.storeId);
       }
+
+      const [{ data: productsCat }, { data: categories }] = await Promise.all([
+        prodQuery,
+        catQuery
+      ]);
+
+      const prodsList = productsCat || [];
+      const catsList = categories || [];
+      const categoryMap = new Map(catsList.map(c => [c.id, c]));
+
+      // Top productos vendidos
+      const prodSales: Record<string, { name: string; sales: number; revenue: number }> = {};
+      storeItems.forEach(item => {
+        const prod = prodsList.find(p => p.id === item.product_id);
+        const prodName = prod?.name || item.product_name || 'Producto';
+        const prodId = item.product_id || prod?.id || 'prod';
+        const prodPrice = prod?.price || item.unit_price || 0;
+
+        if (!prodSales[prodId]) {
+          prodSales[prodId] = { name: prodName, sales: 0, revenue: 0 };
+        }
+        prodSales[prodId].sales += Number(item.quantity || 0);
+        prodSales[prodId].revenue += Number(item.quantity || 0) * Number(prodPrice);
+      });
+
+      setTopProducts(
+        Object.values(prodSales)
+          .sort((a, b) => b.sales - a.sales)
+          .slice(0, 5)
+      );
+
+      // Ventas por categoría
+      const catSales: Record<string, { name: string; value: number; color: string }> = {};
+      const defaultColors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4'];
+      let colorIndex = 0;
+
+      storeItems.forEach(item => {
+        const prod = prodsList.find(p => p.id === item.product_id);
+        const catId = prod?.category_id || 'general';
+        const catObj = prod?.category_id ? categoryMap.get(prod.category_id) : null;
+        const catName = catObj?.name || 'General / Varios';
+        const catColor = catObj?.color || defaultColors[colorIndex % defaultColors.length];
+
+        if (!catSales[catId]) {
+          catSales[catId] = { name: catName, value: 0, color: catColor };
+          colorIndex++;
+        }
+        catSales[catId].value += Number(item.quantity || 0);
+      });
+
+      const validCatData = Object.values(catSales).filter(c => c.value > 0);
+      setCategoryData(validCatData);
+
+      // Alertas de stock bajo
+      setLowStockAlerts(
+        prodsList
+          .filter(p => Number(p.stock) <= Number(p.min_stock))
+          .map(p => ({
+            product: p.name,
+            current: Number(p.stock),
+            minimum: Number(p.min_stock),
+            severity: Number(p.stock) === 0 ? 'high' : 'medium'
+          }))
+      );
     };
+
     fetchMetrics();
-  }, [supabase]);
+
+    // Suscripción en Tiempo Real
+    const channel = supabase
+      .channel('realtime_dashboard_metrics')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchMetrics())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoice_items' }, () => fetchMetrics())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchMetrics())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchMetrics())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user?.storeId]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -270,26 +326,32 @@ export function DashboardOverview() {
             <CardDescription>Top 5 productos por volumen de ventas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {topProducts.map((product, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="font-medium">{product.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {product.sales} unidades vendidas
+            {topProducts.length === 0 ? (
+              <div className="text-center text-muted-foreground py-10">
+                No hay productos vendidos registrados todavía.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {topProducts.map((product, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {product.sales} unidades vendidas
+                      </div>
+                      <Progress 
+                        value={(product.sales / Math.max(...topProducts.map(p => p.sales))) * 100} 
+                        className="mt-2 h-2"
+                      />
                     </div>
-                    <Progress 
-                      value={(product.sales / Math.max(...topProducts.map(p => p.sales))) * 100} 
-                      className="mt-2 h-2"
-                    />
+                    <div className="text-right ml-4">
+                      <div className="font-medium">${product.revenue.toLocaleString()}</div>
+                      <div className="text-sm text-muted-foreground">ingresos</div>
+                    </div>
                   </div>
-                  <div className="text-right ml-4">
-                    <div className="font-medium">${product.revenue.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">ingresos</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

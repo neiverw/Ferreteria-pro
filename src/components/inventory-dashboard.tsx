@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Package, Search, Plus, Edit, Eye, AlertTriangle, Lock, Trash2, ListTree } from 'lucide-react';
-import { usePermissions } from './auth-context';
+import { usePermissions, useAuth } from './auth-context';
 import { TableSkeleton } from './ui/table-skeleton';
 import { Label } from "./ui/label";
 
@@ -83,18 +83,25 @@ export function InventoryDashboard() {
   const [categoryColorError, setCategoryColorError] = useState<string | null>(null);
 
   const { userRole } = usePermissions();
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        let query = supabase
           .from('products')
           .select(`
             *,
             categories(id, name),
             suppliers(id, name)
           `);
+
+        if (user?.storeId) {
+          query = query.eq('store_id', user.storeId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         if (data) setProducts(data);
@@ -105,29 +112,50 @@ export function InventoryDashboard() {
       }
     };
 
-    interface Supplier {
-      id: string;
-      name: string;
-    }
-
-
-
     const loadCategories = async () => {
-      const { data, error } = await supabase
+      let catQuery = supabase
         .from('categories')
         .select('*')
         .order('name');
+
+      if (user?.storeId) {
+        catQuery = catQuery.eq('store_id', user.storeId);
+      }
+
+      const { data, error } = await catQuery;
       if (data) setCategories(data);
     };
+
     loadProducts();
     loadCategories();
-  }, [supabase]);
+
+    // Suscripción en Tiempo Real
+    const channel = supabase
+      .channel('realtime_inventory_dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        loadProducts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        loadCategories();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user?.storeId]);
 
   const refreshCategories = async () => {
-    const { data, error } = await supabase
+    let catQuery = supabase
       .from('categories')
       .select('*')
       .order('name');
+
+    if (user?.storeId) {
+      catQuery = catQuery.eq('store_id', user.storeId);
+    }
+
+    const { data, error } = await catQuery;
     if (data) setCategories(data);
   };
 
@@ -189,33 +217,45 @@ export function InventoryDashboard() {
   // --- Al agregar producto ---
   const handleAddProduct = async () => {
     try {
+      const productPayload: Record<string, unknown> = {
+        ...newProduct,
+        category_id: newProduct.category_id || null,
+        supplier_id: newProduct.supplier_id || null,
+        brand: newProduct.brand || null,
+        stock: Number(newProduct.stock) || 0,
+        min_stock: Number(newProduct.min_stock) || 0,
+        price: Number(newProduct.price) || 0,
+        cost: newProduct.cost ? Number(newProduct.cost) : null,
+        location: newProduct.location || null,
+        is_active: true
+      };
+
+      if (user?.storeId) {
+        productPayload.store_id = user.storeId;
+      }
+
       const { error: productError } = await supabase
         .from('products')
-        .insert({
-          ...newProduct,
-          category_id: newProduct.category_id || null,
-          supplier_id: newProduct.supplier_id || null, // 👈 aquí ya se guarda el proveedor
-          brand: newProduct.brand || null,
-          stock: Number(newProduct.stock) || 0,
-          min_stock: Number(newProduct.min_stock) || 0,
-          price: Number(newProduct.price) || 0,
-          cost: newProduct.cost ? Number(newProduct.cost) : null,
-          location: newProduct.location || null,
-          is_active: true
-        });
+        .insert(productPayload);
 
       if (productError) throw productError;
 
       closeDialog();
 
-      // Recargar productos con join de categorías y proveedores
-      const { data: updatedProducts } = await supabase
+      // Recargar productos con join de categorías y proveedores filtrados por tienda
+      let refreshQuery = supabase
         .from('products')
         .select(`
         *,
         categories(id, name),
         suppliers(id, name)
       `);
+
+      if (user?.storeId) {
+        refreshQuery = refreshQuery.eq('store_id', user.storeId);
+      }
+
+      const { data: updatedProducts } = await refreshQuery;
 
       if (updatedProducts) setProducts(updatedProducts);
 
@@ -251,9 +291,18 @@ export function InventoryDashboard() {
       return;
     }
 
+    const catPayload: Record<string, unknown> = {
+      name: newCategory.name,
+      description: newCategory.description,
+      color: newCategory.color
+    };
+    if (user?.storeId) {
+      catPayload.store_id = user.storeId;
+    }
+
     const { error } = await supabase
       .from('categories')
-      .insert({ name: newCategory.name, description: newCategory.description, color: newCategory.color });
+      .insert(catPayload);
     if (!error) {
       await refreshCategories();
       setActiveDialog('manageCategories');
@@ -304,18 +353,24 @@ export function InventoryDashboard() {
 
   useEffect(() => {
     const fetchSuppliers = async () => {
-      const { data, error } = await supabase
+      let suppQuery = supabase
         .from('suppliers')
         .select('id, name')
         .order('name', { ascending: true });
 
+      if (user?.storeId) {
+        suppQuery = suppQuery.eq('store_id', user.storeId);
+      }
+
+      const { data, error } = await suppQuery;
+
       if (!error && data) {
-        setSuppliers(data as Supplier[]); // 👈 ya no rompe
+        setSuppliers(data as Supplier[]);
       }
     };
 
     fetchSuppliers();
-  }, []);
+  }, [supabase, user?.storeId]);
 
 
   if (loading) {
@@ -763,13 +818,19 @@ export function InventoryDashboard() {
 
                 if (!error) {
                   closeDialog();
-                  const { data: updatedProducts } = await supabase
+                  let refreshQuery = supabase
                     .from('products')
                     .select(`
                       *,
                       categories(id, name),
                       suppliers(id, name)
                     `);
+
+                  if (user?.storeId) {
+                    refreshQuery = refreshQuery.eq('store_id', user.storeId);
+                  }
+
+                  const { data: updatedProducts } = await refreshQuery;
                   if (updatedProducts) setProducts(updatedProducts);
                 } else {
                   console.error("Error al actualizar:", error);

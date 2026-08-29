@@ -10,6 +10,9 @@ import { Pencil, Trash2, Plus, Search, Package, AlertTriangle } from 'lucide-rea
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { toast } from 'sonner';
 
+import { useMemo } from 'react';
+import { createSupabaseBrowserClient } from '@/lib/supabase';
+
 interface Supplier {
   id: string;
   name: string;
@@ -55,9 +58,22 @@ export function SuppliersManagement() {
     address: ''
   });
 
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+
   useEffect(() => {
     fetchSuppliers();
-  }, []);
+
+    const channel = supabase
+      .channel('realtime_suppliers_management')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, () => {
+        fetchSuppliers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   const fetchSuppliers = async () => {
     try {

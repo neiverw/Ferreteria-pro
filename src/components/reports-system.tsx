@@ -89,7 +89,8 @@ export function ReportsSystem() {
 
   const fetchAllData = async () => {
     setLoading(true);
-    const { data: reportsData, error: reportsError } = await supabase
+
+    let reportsQuery = supabase
       .from('stock_reports')
       .select(`
         *,
@@ -99,15 +100,21 @@ export function ReportsSystem() {
       .order('report_date', { ascending: false })
       .order('report_time', { ascending: false });
 
-    const { data: productsData, error: productsError } = await supabase
+    let productsQuery = supabase
       .from('products')
       .select('*')
       .eq('is_active', true)
       .order('name');
 
-    const { data: lowStockData, error: lowStockError } = await supabase
-      .from('low_stock_products')
-      .select('*');
+    if (user?.storeId) {
+      reportsQuery = reportsQuery.eq('store_id', user.storeId);
+      productsQuery = productsQuery.eq('store_id', user.storeId);
+    }
+
+    const [{ data: reportsData, error: reportsError }, { data: productsData, error: productsError }] = await Promise.all([
+      reportsQuery,
+      productsQuery
+    ]);
 
     if (reportsError) {
       toast.error('Error al cargar los reportes.', { description: reportsError.message });
@@ -115,18 +122,43 @@ export function ReportsSystem() {
       setReports(reportsData || []);
     }
 
-    if (productsError) toast.error('Error al cargar los productos.');
-    else setProducts(productsData || []);
+    if (productsError) {
+      toast.error('Error al cargar los productos.');
+    } else {
+      const prods = productsData || [];
+      setProducts(prods);
 
-    if (lowStockError) toast.error('Error al cargar alertas de stock.', { description: lowStockError.message });
-    else setLowStockProducts(lowStockData || []);
+      const lowStock: LowStockProduct[] = prods
+        .filter((p: Product) => Number(p.stock) <= Number(p.min_stock))
+        .map((p: Product) => ({
+          ...p,
+          category_name: null,
+          stock_status: Number(p.stock) === 0 ? 'critical' : 'low'
+        }));
+      setLowStockProducts(lowStock);
+    }
 
     setLoading(false);
   };
 
   useEffect(() => {
     fetchAllData();
-  }, [supabase]);
+
+    // Suscripción en Tiempo Real
+    const channel = supabase
+      .channel('realtime_reports_system')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_reports' }, () => {
+        fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchAllData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user?.storeId]);
 
   // Métricas calculadas
   const criticalProducts = lowStockProducts.filter(p => p.stock_status === 'critical');
@@ -161,7 +193,7 @@ export function ReportsSystem() {
     // Generar un número de reporte único
     const reportNumber = `REP-${Date.now()}`;
 
-    const { error } = await supabase.from('stock_reports').insert({
+    const reportPayload: Record<string, unknown> = {
       report_number: reportNumber,
       product_id: product.id,
       reported_by: user.id,
@@ -171,14 +203,20 @@ export function ReportsSystem() {
       notes: newReport.notes,
       location: product.location,
       status: 'pending'
-    });
+    };
+
+    if (user.storeId) {
+      reportPayload.store_id = user.storeId;
+    }
+
+    const { error } = await supabase.from('stock_reports').insert(reportPayload);
 
     if (error) {
       toast.error('Error al crear el reporte.', { description: error.message });
     } else {
       toast.success('Reporte creado exitosamente.');
       setNewReport({ productId: '', reportedStock: '', notes: '', priority: 'medium' });
-      await fetchAllData(); // Recargar datos
+      await fetchAllData();
     }
   };
 

@@ -52,10 +52,11 @@ export function UserPreferences() {
       await setFontSize(localFontSize);
       
       toast.success('Preferencias guardadas exitosamente');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error al guardar preferencias:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast.error('Error al guardar preferencias', { 
-        description: error.message || 'Error desconocido' 
+        description: errorMessage 
       });
     }
   };

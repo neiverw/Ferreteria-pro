@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useAuth } from './auth-context';
 
-interface SystemSettings {
+export interface SystemSettings {
   companyName: string;
   companyNit: string;
   companyAddress: string;
@@ -22,11 +23,20 @@ interface SystemSettingsContextType {
 const SystemSettingsContext = createContext<SystemSettingsContextType | undefined>(undefined);
 
 export function SystemSettingsProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<SystemSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
+    // Si no está autenticado, no hacer peticiones al backend
+    if (!isAuthenticated) {
+      setSettings(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const response = await fetch('/api/system-settings', {
         method: 'GET',
@@ -51,21 +61,31 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
 
         setSettings(newSettings);
         setError(null);
+      } else if (response.status === 401) {
+        setSettings(null);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.details || 'Error al cargar configuración');
       }
-    } catch (err: any) {
-      console.error('Error loading system settings:', err);
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido al cargar configuración';
+      console.error('Error loading system settings:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (!authLoading) {
+      if (isAuthenticated) {
+        fetchSettings();
+      } else {
+        setSettings(null);
+        setLoading(false);
+      }
+    }
+  }, [isAuthenticated, authLoading, fetchSettings]);
 
   const updateSettings = async (newSettings: Partial<SystemSettings>) => {
     try {
@@ -106,15 +126,15 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
       }
 
       setSettings(prev => prev ? ({ ...prev, ...newSettings }) : null);
-    } catch (err: any) {
-      console.error('Error updating system settings:', err);
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al guardar configuración';
+      console.error('Error updating system settings:', errorMessage);
+      setError(errorMessage);
       throw err;
     }
   };
 
   const refreshSettings = () => {
-    setLoading(true);
     fetchSettings();
   };
 

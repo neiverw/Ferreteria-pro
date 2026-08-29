@@ -15,30 +15,40 @@ export async function GET() {
     }
   );
 
-  // Verificar sesión
+  // 1. Verificar sesión
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
-  // Verificar que sea admin leyendo SU perfil
+  // 2. Verificar rol y obtener store_id del usuario conectado
   const { data: me, error: meErr } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, store_id')
     .eq('user_id', user.id)
     .single();
 
   if (meErr) return NextResponse.json({ error: 'No se pudo verificar el rol' }, { status: 500 });
-  if (me?.role !== 'admin') return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  if (me?.role !== 'admin' && me?.role !== 'owner') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  }
 
-  // Listar todos los perfiles con SERVICE_ROLE (bypassa RLS)
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: users, error } = await adminClient
+  // 3. Filtrar usuarios estrictamente por la ferretería actual
+  let query = adminClient
     .from('profiles')
-    .select('user_id,username,name,email,role');
+    .select('user_id,username,name,email,role,store_id');
+
+  if (me.store_id) {
+    query = query.eq('store_id', me.store_id);
+  } else {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data: users, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ users }, { status: 200 });
+  return NextResponse.json({ users: users || [] }, { status: 200 });
 }
